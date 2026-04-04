@@ -1,0 +1,72 @@
+{
+  "source": "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Views/SourcePickerView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Source — %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 156
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choose Video",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 61
+        }
+      },
+      {
+        "comment": "",
+        "key": "MP4, MOV, M4V from your library",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choose Image",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 87
+        }
+      },
+      {
+        "comment": "",
+        "key": "JPG, PNG, HEIF from your library",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 90
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scanning local network...",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 110
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear Source",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 133
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 160
+        }
+      }
+    ]
+  },
+  "version": 1
+}

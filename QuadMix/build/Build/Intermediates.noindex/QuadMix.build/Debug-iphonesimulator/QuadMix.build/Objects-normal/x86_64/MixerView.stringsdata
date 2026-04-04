@@ -1,0 +1,280 @@
+{
+  "source": "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Views/MixerView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "FX PARAMS — CH%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "COLOR — CH%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "AUDIO REACT — CH%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "GLOBAL COLOR",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "PRESETS",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 131
+        }
+      },
+      {
+        "comment": "",
+        "key": "CLOSE",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "WASTEMIX",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 170
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lldfps",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 177
+        }
+      },
+      {
+        "comment": "",
+        "key": "CH%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 236
+        }
+      },
+      {
+        "comment": "",
+        "key": " PVW",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 240
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 245
+        }
+      },
+      {
+        "comment": "",
+        "key": "STOP",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 316
+        }
+      },
+      {
+        "comment": "",
+        "key": "GO",
+        "location": {
+          "startingColumn": 60,
+          "startingLine": 316
+        }
+      },
+      {
+        "comment": "",
+        "key": "MASTER",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 384
+        }
+      },
+      {
+        "comment": "",
+        "key": "A",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 400
+        }
+      },
+      {
+        "comment": "",
+        "key": "B",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 427
+        }
+      },
+      {
+        "comment": "",
+        "key": "ACTIVE",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 452
+        }
+      },
+      {
+        "comment": "",
+        "key": "OFF",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 452
+        }
+      },
+      {
+        "comment": "",
+        "key": "FADE TO BLACK",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 478
+        }
+      },
+      {
+        "comment": "",
+        "key": "LOAD",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 500
+        }
+      },
+      {
+        "comment": "",
+        "key": "ADVANCED OUTPUT",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 518
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 549
+        }
+      },
+      {
+        "comment": "",
+        "key": "FX PARAMS — %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 658
+        }
+      },
+      {
+        "comment": "",
+        "key": "EFFECT",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 664
+        }
+      },
+      {
+        "comment": "",
+        "key": "FREEZE",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 702
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 706
+        }
+      },
+      {
+        "comment": "",
+        "key": "PARAMETERS — %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 719
+        }
+      },
+      {
+        "comment": "",
+        "key": "KEYING",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 748
+        }
+      },
+      {
+        "comment": "",
+        "key": "Type",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 752
+        }
+      },
+      {
+        "comment": "",
+        "key": "PIP / POSITION",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 787
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 792
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 831
+        }
+      },
+      {
+        "comment": "",
+        "key": "AUDIO",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 879
+        }
+      },
+      {
+        "comment": "",
+        "key": "COLOR",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 898
+        }
+      }
+    ]
+  },
+  "version": 1
+}

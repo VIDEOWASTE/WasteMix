@@ -1,0 +1,44 @@
+{
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Models/ChannelEffect.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ChannelEffect.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ChannelEffect.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ChannelEffect.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ChannelEffect.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ChannelEffect.swiftdeps"
+  },
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Models/MixerPreset.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MixerPreset.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MixerPreset.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MixerPreset.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MixerPreset.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MixerPreset.swiftdeps"
+  },
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Views/CrossfaderView.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/CrossfaderView.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/CrossfaderView.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/CrossfaderView.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/CrossfaderView.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/CrossfaderView.swiftdeps"
+  },
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Views/EffectsControlView.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/EffectsControlView.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/EffectsControlView.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/EffectsControlView.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/EffectsControlView.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/EffectsControlView.swiftdeps"
+  },
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Views/MiniChannelView.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MiniChannelView.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MiniChannelView.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MiniChannelView.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MiniChannelView.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MiniChannelView.swiftdeps"
+  },
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Views/MiniMasterView.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MiniMasterView.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MiniMasterView.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MiniMasterView.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MiniMasterView.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MiniMasterView.swiftdeps"
+  }
+}

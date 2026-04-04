@@ -1,0 +1,51 @@
+{
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Models/BlendMode.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/BlendMode.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/BlendMode.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/BlendMode.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/BlendMode.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/BlendMode.swiftdeps"
+  },
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Models/Channel.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/Channel.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/Channel.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/Channel.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/Channel.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/Channel.swiftdeps"
+  },
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Models/ColorCorrection.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ColorCorrection-ac5075a4ff0ca8455cc0fb101bc2ca7b.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ColorCorrection-ac5075a4ff0ca8455cc0fb101bc2ca7b.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ColorCorrection-ac5075a4ff0ca8455cc0fb101bc2ca7b.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ColorCorrection-ac5075a4ff0ca8455cc0fb101bc2ca7b.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ColorCorrection-ac5075a4ff0ca8455cc0fb101bc2ca7b.swiftdeps"
+  },
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Models/ContentSource.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ContentSource.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ContentSource.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ContentSource.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ContentSource.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/ContentSource.swiftdeps"
+  },
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Models/MixerState.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MixerState.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MixerState.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MixerState.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MixerState.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/MixerState.swiftdeps"
+  },
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Models/TransitionType.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/TransitionType.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/TransitionType.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/TransitionType.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/TransitionType.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/TransitionType.swiftdeps"
+  },
+  "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/WasteMixApp.swift" : {
+    "const-values" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/WasteMixApp.swiftconstvalues",
+    "dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/WasteMixApp.d",
+    "diagnostics" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/WasteMixApp.dia",
+    "object" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/WasteMixApp.o",
+    "swift-dependencies" : "/Users/nate/Downloads/Ipadapp/QuadMix/build/Build/Intermediates.noindex/QuadMix.build/Debug-iphonesimulator/QuadMix.build/Objects-normal/x86_64/WasteMixApp.swiftdeps"
+  }
+}

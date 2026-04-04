@@ -1,0 +1,208 @@
+{
+  "source": "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Views/AdvancedOutputView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "ADVANCED OUTPUT",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 57
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 76
+        }
+      },
+      {
+        "comment": "",
+        "key": "LIVE",
+        "location": {
+          "startingColumn": 74,
+          "startingLine": 71
+        }
+      },
+      {
+        "comment": "",
+        "key": "OFF",
+        "location": {
+          "startingColumn": 83,
+          "startingLine": 71
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connect via USB-C/HDMI, or open the output window and drag it to an external display in Stage Manager.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 268
+        }
+      },
+      {
+        "comment": "",
+        "key": "Drag the output window to an external display, or use it as a fullscreen output on this device.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 321
+        }
+      },
+      {
+        "comment": "",
+        "key": "No external display connected",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 262
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lldx%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 285
+        }
+      },
+      {
+        "comment": "",
+        "key": "OPEN OUTPUT WINDOW",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 311
+        }
+      },
+      {
+        "comment": "",
+        "key": "Test Pattern",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 349
+        }
+      },
+      {
+        "comment": "",
+        "key": "W",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 338
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 339
+        }
+      },
+      {
+        "comment": "",
+        "key": "H",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 343
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 344
+        }
+      },
+      {
+        "comment": "",
+        "key": "Drag nodes on the canvas to warp the output",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 469
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 438
+        }
+      },
+      {
+        "comment": "",
+        "key": "GRID: %lldx%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 449
+        }
+      },
+      {
+        "comment": "",
+        "key": "ADD NODES",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 455
+        }
+      },
+      {
+        "comment": "",
+        "key": "RESET",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 463
+        }
+      },
+      {
+        "comment": "",
+        "key": "NODE %lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 476
+        }
+      },
+      {
+        "comment": "",
+        "key": "X: %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 477
+        }
+      },
+      {
+        "comment": "",
+        "key": "Y: %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 479
+        }
+      },
+      {
+        "comment": "",
+        "key": "Program NDI",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 493
+        }
+      },
+      {
+        "comment": "",
+        "key": "NAME",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 501
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 502
+        }
+      }
+    ]
+  },
+  "version": 1
+}

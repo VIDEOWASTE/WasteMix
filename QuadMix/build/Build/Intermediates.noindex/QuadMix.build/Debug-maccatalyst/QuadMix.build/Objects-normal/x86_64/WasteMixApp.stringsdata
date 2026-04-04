@@ -1,0 +1,32 @@
+{
+  "source": "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/WasteMixApp.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "WasteMix",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "Advanced Output",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 81
+        }
+      },
+      {
+        "comment": "",
+        "key": "Output",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 113
+        }
+      }
+    ]
+  },
+  "version": 1
+}

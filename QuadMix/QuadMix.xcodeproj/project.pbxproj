@@ -1,0 +1,655 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10001 /* WasteMixApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10001; };
+		A10002 /* BlendMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10002; };
+		A10003 /* Channel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10003; };
+		A10004 /* ColorCorrection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10004; };
+		A10005 /* ContentSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10005; };
+		A10006 /* MixerState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10006; };
+		A10007 /* TransitionType.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10007; };
+		A10008 /* MetalContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10008; };
+		A10009 /* RenderEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10009; };
+		A10010 /* ChannelRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10010; };
+		A10011 /* CompositorPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10011; };
+		A10012 /* TransitionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10012; };
+		A10013 /* TexturePool.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10013; };
+		A10014 /* BlendModes.metal in Sources */ = {isa = PBXBuildFile; fileRef = B10014; };
+		A10015 /* ColorCorrection.metal in Sources */ = {isa = PBXBuildFile; fileRef = B10015; };
+		A10016 /* Passthrough.metal in Sources */ = {isa = PBXBuildFile; fileRef = B10016; };
+		A10017 /* Transitions.metal in Sources */ = {isa = PBXBuildFile; fileRef = B10017; };
+		A10018 /* FrameProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10018; };
+		A10019 /* CameraSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10019; };
+		A10020 /* MediaPlayerSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10020; };
+		A10021 /* ImageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10021; };
+		A10022 /* PatternGeneratorSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10022; };
+		A10023 /* NDISource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10023; };
+		A10024 /* InputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10024; };
+		A10025 /* MixerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10025; };
+		A10026 /* ChannelStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10026; };
+		A10027 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10027; };
+		A10028 /* ProgramOutputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10028; };
+		A10029 /* FaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10029; };
+		A10030 /* BlendModePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10030; };
+		A10031 /* TransitionControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10031; };
+		A10032 /* ColorCorrectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10032; };
+		A10033 /* SourcePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10033; };
+		A10034 /* GlobalControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10034; };
+		A10035 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10035; };
+		A10036 /* CVPixelBufferToMTLTexture.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10036; };
+		A10037 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10040; };
+		A10038 /* WasteMixLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10041; };
+		A10039 /* ChannelEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10042; };
+		A10040 /* MixerPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10043; };
+		A10041 /* Effects.metal in Sources */ = {isa = PBXBuildFile; fileRef = B10044; };
+		A10042 /* EffectsControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10045; };
+		A10043 /* CrossfaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10046; };
+		A10044 /* MiniChannelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10047; };
+		A10045 /* MiniMasterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10048; };
+		A10046 /* AudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10049; };
+		A10047 /* AudioReactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10050; };
+		A10048 /* LFO.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10051; };
+		A10049 /* LFOView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10052; };
+		A10050 /* NDIWrapper.c in Sources */ = {isa = PBXBuildFile; fileRef = B10053; };
+		A10051 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10055; };
+		A10052 /* UIScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10056; };
+		A10053 /* OutputConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10057; };
+		A10054 /* NDIOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10058; };
+		A10055 /* OutputRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10059; };
+		A10056 /* AdvancedOutputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10060; };
+		A10057 /* DisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10061; };
+		A10058 /* OutputDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10062; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		C10000 /* QuadMix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = QuadMix.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10001 /* WasteMixApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WasteMixApp.swift; sourceTree = "<group>"; };
+		B10002 /* BlendMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlendMode.swift; sourceTree = "<group>"; };
+		B10003 /* Channel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Channel.swift; sourceTree = "<group>"; };
+		B10004 /* ColorCorrection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCorrection.swift; sourceTree = "<group>"; };
+		B10005 /* ContentSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentSource.swift; sourceTree = "<group>"; };
+		B10006 /* MixerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixerState.swift; sourceTree = "<group>"; };
+		B10007 /* TransitionType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitionType.swift; sourceTree = "<group>"; };
+		B10008 /* MetalContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalContext.swift; sourceTree = "<group>"; };
+		B10009 /* RenderEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderEngine.swift; sourceTree = "<group>"; };
+		B10010 /* ChannelRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelRenderer.swift; sourceTree = "<group>"; };
+		B10011 /* CompositorPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompositorPipeline.swift; sourceTree = "<group>"; };
+		B10012 /* TransitionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitionEngine.swift; sourceTree = "<group>"; };
+		B10013 /* TexturePool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TexturePool.swift; sourceTree = "<group>"; };
+		B10014 /* BlendModes.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = BlendModes.metal; sourceTree = "<group>"; };
+		B10015 /* ColorCorrection.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ColorCorrection.metal; sourceTree = "<group>"; };
+		B10016 /* Passthrough.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Passthrough.metal; sourceTree = "<group>"; };
+		B10017 /* Transitions.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Transitions.metal; sourceTree = "<group>"; };
+		B10018 /* FrameProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameProvider.swift; sourceTree = "<group>"; };
+		B10019 /* CameraSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSource.swift; sourceTree = "<group>"; };
+		B10020 /* MediaPlayerSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPlayerSource.swift; sourceTree = "<group>"; };
+		B10021 /* ImageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSource.swift; sourceTree = "<group>"; };
+		B10022 /* PatternGeneratorSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternGeneratorSource.swift; sourceTree = "<group>"; };
+		B10023 /* NDISource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NDISource.swift; sourceTree = "<group>"; };
+		B10024 /* InputManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputManager.swift; sourceTree = "<group>"; };
+		B10025 /* MixerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixerView.swift; sourceTree = "<group>"; };
+		B10026 /* ChannelStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelStripView.swift; sourceTree = "<group>"; };
+		B10027 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
+		B10028 /* ProgramOutputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramOutputView.swift; sourceTree = "<group>"; };
+		B10029 /* FaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaderView.swift; sourceTree = "<group>"; };
+		B10030 /* BlendModePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlendModePickerView.swift; sourceTree = "<group>"; };
+		B10031 /* TransitionControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitionControlView.swift; sourceTree = "<group>"; };
+		B10032 /* ColorCorrectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCorrectionView.swift; sourceTree = "<group>"; };
+		B10033 /* SourcePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcePickerView.swift; sourceTree = "<group>"; };
+		B10034 /* GlobalControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalControlsView.swift; sourceTree = "<group>"; };
+		B10035 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		B10036 /* CVPixelBufferToMTLTexture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CVPixelBufferToMTLTexture.swift; sourceTree = "<group>"; };
+		B10037 /* ShaderTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderTypes.h; sourceTree = "<group>"; };
+		B10038 /* WasteMix-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "WasteMix-Bridging-Header.h"; sourceTree = "<group>"; };
+		B10039 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B10040 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		B10041 /* WasteMixLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WasteMixLogo.swift; sourceTree = "<group>"; };
+		B10042 /* ChannelEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelEffect.swift; sourceTree = "<group>"; };
+		B10043 /* MixerPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixerPreset.swift; sourceTree = "<group>"; };
+		B10044 /* Effects.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Effects.metal; sourceTree = "<group>"; };
+		B10045 /* EffectsControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EffectsControlView.swift; sourceTree = "<group>"; };
+		B10046 /* CrossfaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossfaderView.swift; sourceTree = "<group>"; };
+		B10047 /* MiniChannelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniChannelView.swift; sourceTree = "<group>"; };
+		B10048 /* MiniMasterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniMasterView.swift; sourceTree = "<group>"; };
+		B10049 /* AudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngine.swift; sourceTree = "<group>"; };
+		B10050 /* AudioReactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioReactView.swift; sourceTree = "<group>"; };
+		B10051 /* LFO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFO.swift; sourceTree = "<group>"; };
+		B10052 /* LFOView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LFOView.swift; sourceTree = "<group>"; };
+		B10053 /* NDIWrapper.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = NDIWrapper.c; sourceTree = "<group>"; };
+		B10054 /* NDIWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NDIWrapper.h; sourceTree = "<group>"; };
+		B10055 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B10056 /* UIScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIScale.swift; sourceTree = "<group>"; };
+		B10057 /* OutputConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputConfig.swift; sourceTree = "<group>"; };
+		B10058 /* NDIOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NDIOutput.swift; sourceTree = "<group>"; };
+		B10059 /* OutputRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputRenderer.swift; sourceTree = "<group>"; };
+		B10060 /* AdvancedOutputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedOutputView.swift; sourceTree = "<group>"; };
+		B10061 /* DisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayManager.swift; sourceTree = "<group>"; };
+		B10062 /* OutputDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputDisplayView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		E10001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D10000 = {
+			isa = PBXGroup;
+			children = (
+				D10001 /* QuadMix */,
+				D10099 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D10099 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C10000 /* QuadMix.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D10001 /* QuadMix */ = {
+			isa = PBXGroup;
+			children = (
+				B10001 /* WasteMixApp.swift */,
+				B10038 /* WasteMix-Bridging-Header.h */,
+				D10009 /* NDI */,
+				D10002 /* Models */,
+				D10003 /* Rendering */,
+				D10004 /* Shaders */,
+				D10005 /* Input */,
+				D10006 /* Views */,
+				D10007 /* Utilities */,
+				D10008 /* Resources */,
+			);
+			path = QuadMix;
+			sourceTree = "<group>";
+		};
+		D10002 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				B10002 /* BlendMode.swift */,
+				B10003 /* Channel.swift */,
+				B10004 /* ColorCorrection.swift */,
+				B10005 /* ContentSource.swift */,
+				B10006 /* MixerState.swift */,
+				B10007 /* TransitionType.swift */,
+			B10042 /* ChannelEffect.swift */,
+			B10043 /* MixerPreset.swift */,
+			B10051 /* LFO.swift */,
+			B10057 /* OutputConfig.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		D10003 /* Rendering */ = {
+			isa = PBXGroup;
+			children = (
+				B10008 /* MetalContext.swift */,
+				B10009 /* RenderEngine.swift */,
+				B10010 /* ChannelRenderer.swift */,
+				B10011 /* CompositorPipeline.swift */,
+				B10012 /* TransitionEngine.swift */,
+				B10013 /* TexturePool.swift */,
+			B10059 /* OutputRenderer.swift */,
+			);
+			path = Rendering;
+			sourceTree = "<group>";
+		};
+		D10004 /* Shaders */ = {
+			isa = PBXGroup;
+			children = (
+				B10037 /* ShaderTypes.h */,
+				B10014 /* BlendModes.metal */,
+				B10015 /* ColorCorrection.metal */,
+				B10016 /* Passthrough.metal */,
+				B10017 /* Transitions.metal */,
+			B10044 /* Effects.metal */,
+			);
+			path = Shaders;
+			sourceTree = "<group>";
+		};
+		D10005 /* Input */ = {
+			isa = PBXGroup;
+			children = (
+				B10018 /* FrameProvider.swift */,
+				B10019 /* CameraSource.swift */,
+				B10020 /* MediaPlayerSource.swift */,
+				B10021 /* ImageSource.swift */,
+				B10022 /* PatternGeneratorSource.swift */,
+				B10023 /* NDISource.swift */,
+				B10024 /* InputManager.swift */,
+			B10049 /* AudioEngine.swift */,
+			);
+			path = Input;
+			sourceTree = "<group>";
+		};
+		D10006 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				B10025 /* MixerView.swift */,
+				B10026 /* ChannelStripView.swift */,
+				B10027 /* PreviewView.swift */,
+				B10028 /* ProgramOutputView.swift */,
+				B10029 /* FaderView.swift */,
+				B10030 /* BlendModePickerView.swift */,
+				B10031 /* TransitionControlView.swift */,
+				B10032 /* ColorCorrectionView.swift */,
+				B10033 /* SourcePickerView.swift */,
+				B10034 /* GlobalControlsView.swift */,
+			B10041 /* WasteMixLogo.swift */,
+			B10045 /* EffectsControlView.swift */,
+			B10046 /* CrossfaderView.swift */,
+			B10047 /* MiniChannelView.swift */,
+			B10048 /* MiniMasterView.swift */,
+			B10050 /* AudioReactView.swift */,
+			B10052 /* LFOView.swift */,
+			B10060 /* AdvancedOutputView.swift */,
+			B10062 /* OutputDisplayView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		D10007 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				B10035 /* Constants.swift */,
+				B10036 /* CVPixelBufferToMTLTexture.swift */,
+			B10040 /* Haptics.swift */,
+			B10056 /* UIScale.swift */,
+			B10061 /* DisplayManager.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		D10008 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B10039 /* Info.plist */,
+				B10055 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		D10009 /* NDI */ = {
+			isa = PBXGroup;
+			children = (
+				B10054 /* NDIWrapper.h */,
+				B10053 /* NDIWrapper.c */,
+			B10058 /* NDIOutput.swift */,
+			);
+			path = NDI;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F10001 /* QuadMix */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = G10003 /* Build configuration list for PBXNativeTarget "QuadMix" */;
+			buildPhases = (
+				E10002 /* Sources */,
+				E10001 /* Frameworks */,
+				E10003 /* Resources */,
+				E10004 /* Embed NDI Library */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = QuadMix;
+			productName = QuadMix;
+			productReference = C10000 /* QuadMix.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F10000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1540;
+				LastUpgradeCheck = 1540;
+				TargetAttributes = {
+					F10001 = {
+						CreatedOnToolsVersion = 15.4;
+					};
+				};
+			};
+			buildConfigurationList = G10001 /* Build configuration list for PBXProject "QuadMix" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = D10000;
+			productRefGroup = D10099 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F10001 /* QuadMix */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E10003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10051 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		E10004 /* Embed NDI Library */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/QuadMix/NDI/libndi.dylib",
+			);
+			name = "Embed NDI Library";
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/libndi.dylib",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}\"\ncp \"${SRCROOT}/QuadMix/NDI/libndi.dylib\" \"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/libndi.dylib\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E10002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10001 /* WasteMixApp.swift in Sources */,
+				A10002 /* BlendMode.swift in Sources */,
+				A10003 /* Channel.swift in Sources */,
+				A10004 /* ColorCorrection.swift in Sources */,
+				A10005 /* ContentSource.swift in Sources */,
+				A10006 /* MixerState.swift in Sources */,
+				A10007 /* TransitionType.swift in Sources */,
+				A10008 /* MetalContext.swift in Sources */,
+				A10009 /* RenderEngine.swift in Sources */,
+				A10010 /* ChannelRenderer.swift in Sources */,
+				A10011 /* CompositorPipeline.swift in Sources */,
+				A10012 /* TransitionEngine.swift in Sources */,
+				A10013 /* TexturePool.swift in Sources */,
+				A10014 /* BlendModes.metal in Sources */,
+				A10015 /* ColorCorrection.metal in Sources */,
+				A10016 /* Passthrough.metal in Sources */,
+				A10017 /* Transitions.metal in Sources */,
+				A10018 /* FrameProvider.swift in Sources */,
+				A10019 /* CameraSource.swift in Sources */,
+				A10020 /* MediaPlayerSource.swift in Sources */,
+				A10021 /* ImageSource.swift in Sources */,
+				A10022 /* PatternGeneratorSource.swift in Sources */,
+				A10023 /* NDISource.swift in Sources */,
+				A10024 /* InputManager.swift in Sources */,
+				A10025 /* MixerView.swift in Sources */,
+				A10026 /* ChannelStripView.swift in Sources */,
+				A10027 /* PreviewView.swift in Sources */,
+				A10028 /* ProgramOutputView.swift in Sources */,
+				A10029 /* FaderView.swift in Sources */,
+				A10030 /* BlendModePickerView.swift in Sources */,
+				A10031 /* TransitionControlView.swift in Sources */,
+				A10032 /* ColorCorrectionView.swift in Sources */,
+				A10033 /* SourcePickerView.swift in Sources */,
+				A10034 /* GlobalControlsView.swift in Sources */,
+				A10035 /* Constants.swift in Sources */,
+				A10036 /* CVPixelBufferToMTLTexture.swift in Sources */,
+			A10037 /* Haptics.swift in Sources */,
+			A10038 /* WasteMixLogo.swift in Sources */,
+			A10039 /* ChannelEffect.swift in Sources */,
+			A10040 /* MixerPreset.swift in Sources */,
+			A10041 /* Effects.metal in Sources */,
+			A10042 /* EffectsControlView.swift in Sources */,
+			A10043 /* CrossfaderView.swift in Sources */,
+			A10044 /* MiniChannelView.swift in Sources */,
+			A10045 /* MiniMasterView.swift in Sources */,
+			A10046 /* AudioEngine.swift in Sources */,
+			A10047 /* AudioReactView.swift in Sources */,
+			A10048 /* LFO.swift in Sources */,
+			A10049 /* LFOView.swift in Sources */,
+			A10050 /* NDIWrapper.c in Sources */,
+			A10052 /* UIScale.swift in Sources */,
+			A10053 /* OutputConfig.swift in Sources */,
+			A10054 /* NDIOutput.swift in Sources */,
+			A10055 /* OutputRenderer.swift in Sources */,
+			A10056 /* AdvancedOutputView.swift in Sources */,
+			A10057 /* DisplayManager.swift in Sources */,
+			A10058 /* OutputDisplayView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		H10001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"ENABLE_NDI=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		H10002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		H10003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = QuadMix/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WasteMix;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = NO;
+				INFOPLIST_KEY_UIStatusBarHidden = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/QuadMix/Shaders";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/QuadMix/NDI";
+				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/QuadMix/NDI";
+				OTHER_LDFLAGS = "-lndi";
+				PRODUCT_BUNDLE_IDENTIFIER = com.wastemix.app;
+				PRODUCT_NAME = WasteMix;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "QuadMix/WasteMix-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "2,6";
+			};
+			name = Debug;
+		};
+		H10004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = QuadMix/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WasteMix;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = NO;
+				INFOPLIST_KEY_UIStatusBarHidden = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/QuadMix/Shaders";
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/QuadMix/NDI";
+				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/QuadMix/NDI";
+				OTHER_LDFLAGS = "-lndi";
+				PRODUCT_BUNDLE_IDENTIFIER = com.wastemix.app;
+				PRODUCT_NAME = WasteMix;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "QuadMix/WasteMix-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "2,6";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		G10001 /* Build configuration list for PBXProject "QuadMix" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				H10001 /* Debug */,
+				H10002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		G10003 /* Build configuration list for PBXNativeTarget "QuadMix" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				H10003 /* Debug */,
+				H10004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = F10000 /* Project object */;
+}

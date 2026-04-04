@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>WasteMix</string>
+    <key>NSCameraUsageDescription</key>
+    <string>WasteMix needs camera access to use the iPad camera as a video source for mixing.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>WasteMix needs access to your photo library to import videos and images as mixing sources.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>WasteMix uses the microphone for audio-reactive visuals that respond to music in real-time.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>WasteMix uses the local network to discover and receive NDI video sources.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_ndi._tcp</string>
+    </array>
+    <key>UIRequiresFullScreen</key>
+    <false/>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UISupportsMultipleWindows</key>
+    <true/>
+</dict>
+</plist>

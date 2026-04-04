@@ -1,0 +1,5 @@
+dependencies: \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk/SDKSettings.json \
+  /Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Shaders/Passthrough.metal \
+  /Users/nate/Library/Developer/DVTDownloads/MetalToolchain/mounts/ae6c58470d7c9cd49b7857ebad1f170cf0fa102e/Metal.xctoolchain/usr/metal/32023/lib/clang/32023.883/include/metal/module.modulemap \
+  /Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Shaders/ShaderTypes.h

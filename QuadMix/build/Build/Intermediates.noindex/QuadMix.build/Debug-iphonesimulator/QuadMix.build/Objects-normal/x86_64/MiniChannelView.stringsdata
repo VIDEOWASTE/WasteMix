@@ -1,0 +1,80 @@
+{
+  "source": "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Views/MiniChannelView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "PVW",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "STP",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "AUT",
+        "location": {
+          "startingColumn": 56,
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "Transition",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 242
+        }
+      },
+      {
+        "comment": "",
+        "key": "Effects",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 252
+        }
+      },
+      {
+        "comment": "",
+        "key": "Color Correction",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 258
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 275
+        }
+      }
+    ]
+  },
+  "version": 1
+}

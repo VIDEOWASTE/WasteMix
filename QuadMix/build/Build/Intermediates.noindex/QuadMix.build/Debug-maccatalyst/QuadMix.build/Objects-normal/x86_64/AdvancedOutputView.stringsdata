@@ -1,0 +1,352 @@
+{
+  "source": "/Users/nate/Downloads/Ipadapp/QuadMix/QuadMix/Views/AdvancedOutputView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "ADV OUT",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 21
+        }
+      },
+      {
+        "comment": "",
+        "key": "ADV OUTPUT",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 89
+        }
+      },
+      {
+        "comment": "",
+        "key": "LIVE",
+        "location": {
+          "startingColumn": 74,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "OFF",
+        "location": {
+          "startingColumn": 83,
+          "startingLine": 85
+        }
+      },
+      {
+        "comment": "",
+        "key": "+",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "RST",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 129
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lldx%lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 183
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move / resize",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 193
+        }
+      },
+      {
+        "comment": "",
+        "key": "Drag nodes to warp",
+        "location": {
+          "startingColumn": 57,
+          "startingLine": 193
+        }
+      },
+      {
+        "comment": "",
+        "key": "ADD",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 157
+        }
+      },
+      {
+        "comment": "",
+        "key": "RESET",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 171
+        }
+      },
+      {
+        "comment": "",
+        "key": "No displays detected",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 572
+        }
+      },
+      {
+        "comment": "",
+        "key": "ON",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 597
+        }
+      },
+      {
+        "comment": "",
+        "key": "OFF",
+        "location": {
+          "startingColumn": 65,
+          "startingLine": 597
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 73,
+          "startingLine": 597
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lldx%lld",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 594
+        }
+      },
+      {
+        "comment": "",
+        "key": "OPEN",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 613
+        }
+      },
+      {
+        "comment": "",
+        "key": "REFRESH",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 620
+        }
+      },
+      {
+        "comment": "",
+        "key": "ADD",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 653
+        }
+      },
+      {
+        "comment": "",
+        "key": "MESH %lldx%lld",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 690
+        }
+      },
+      {
+        "comment": "",
+        "key": "RESET",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 802
+        }
+      },
+      {
+        "comment": "",
+        "key": "RESET",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 843
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 863
+        }
+      },
+      {
+        "comment": "",
+        "key": "GRID: %lldx%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 876
+        }
+      },
+      {
+        "comment": "",
+        "key": "ADD",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 885
+        }
+      },
+      {
+        "comment": "",
+        "key": "RESET",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 896
+        }
+      },
+      {
+        "comment": "",
+        "key": "NODE %lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 905
+        }
+      },
+      {
+        "comment": "",
+        "key": "X: %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 906
+        }
+      },
+      {
+        "comment": "",
+        "key": "Y: %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 908
+        }
+      },
+      {
+        "comment": "",
+        "key": "Program NDI",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 921
+        }
+      },
+      {
+        "comment": "",
+        "key": "NAME",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 929
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 930
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 959
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 989
+        }
+      },
+      {
+        "comment": "",
+        "key": "NDI",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1010
+        }
+      },
+      {
+        "comment": "",
+        "key": "SCREEN SENDS",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1060
+        }
+      },
+      {
+        "comment": "",
+        "key": "NDI SENDS",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1026
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 1036
+        }
+      },
+      {
+        "comment": "",
+        "key": "PROGRAM",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1042
+        }
+      },
+      {
+        "comment": "",
+        "key": "Name",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 1045
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1066
+        }
+      },
+      {
+        "comment": "",
+        "key": "NDI Name",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 1078
+        }
+      }
+    ]
+  },
+  "version": 1
+}
