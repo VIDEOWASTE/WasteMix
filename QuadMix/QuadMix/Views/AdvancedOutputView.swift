@@ -10,49 +10,58 @@ struct AdvancedOutputView: View {
 
     var body: some View {
         GeometryReader { geo in
+            let w = geo.size.width
+            let panelScale = min(1.3, max(0.65, w / 550.0))
+            // sc passed to functions but we use scaleEffect for uniform scaling
             let sc: CGFloat = 1.0
 
-            HStack(spacing: 0) {
-                // Left: top bar + mode bar + canvas — all flush
-                VStack(spacing: 0) {
-                    // Combined top bar
-                    HStack(spacing: 6) {
-                        Rectangle().fill(R).frame(width: 2, height: 10)
-                        Text("ADV OUT")
-                            .font(.system(size: 8, weight: .black, design: .monospaced))
-                            .foregroundColor(.white)
+            VStack(spacing: 0) {
+                // Top bar — always full size
+                HStack(spacing: 6) {
+                    Rectangle().fill(R).frame(width: 2, height: 10)
+                    Text("ADV OUT")
+                        .font(.system(size: 9, weight: .black, design: .monospaced))
+                        .foregroundColor(.white)
 
-                        canvasModeBarInline(sc)
+                    canvasModeBarInline(sc)
 
-                        Spacer()
+                    Spacer()
 
-                        ndiSendButton(sc)
-                    }
-                    .padding(.horizontal, 6).padding(.vertical, 3)
-                    .background(Color(red: 0.05, green: 0.05, blue: 0.06))
+                    ndiSendButton(sc)
+                }
+                .padding(.horizontal, 6).padding(.vertical, 3)
+                .background(Color(red: 0.05, green: 0.05, blue: 0.06))
 
-                    // Canvas fills remaining space
+                // Main content
+                HStack(spacing: 0) {
+                    // Canvas — fills remaining space
                     outputCanvas(sc, size: geo.size)
-                }
+                        .frame(maxWidth: .infinity)
 
-                Rectangle().fill(R.opacity(0.1)).frame(width: 1)
+                    Rectangle().fill(R.opacity(0.1)).frame(width: 1)
 
-                // Right: controls panel
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        screenTabs(sc)
-                        destinationPicker(sc)
-                        screenSettings(sc)
-                        sliceList(sc)
-                        if let slice = selectedSliceBinding {
-                            transformSection(slice, sc)
-                            inputSection(slice, sc)
-                            blendSection(slice, sc)
+                    // Right panel — liquid scaled like main mixer
+                    let panelW = min(max(w * 0.35, 180), 280)
+                    ScrollView(.vertical, showsIndicators: true) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            screenTabs(sc)
+                            destinationPicker(sc)
+                            sliceList(sc)
+                            if let slice = selectedSliceBinding {
+                                transformSection(slice, sc)
+                                inputSection(slice, sc)
+                                blendSection(slice, sc)
+                            }
+                            Spacer(minLength: 8)
                         }
+                        .padding(10)
+                        .scaleEffect(panelScale, anchor: .topLeading)
+                        .frame(width: panelW / panelScale, alignment: .leading)
+                        .frame(width: panelW, alignment: .leading)
                     }
-                    .padding(10)
+                    .frame(width: panelW)
+                    .clipped()
                 }
-                .frame(width: min(max(geo.size.width * 0.35, 220), 300))
             }
             .background(Color(red: 0.03, green: 0.03, blue: 0.04))
         }
@@ -506,26 +515,39 @@ struct AdvancedOutputView: View {
     // MARK: - Screen Tabs
 
     private func screenTabs(_ sc: CGFloat) -> some View {
-        HStack(spacing: scaled(3, sc)) {
-            ForEach(Array(outputConfig.screens.enumerated()), id: \.element.id) { i, screen in
-                Button {
-                    outputConfig.selectedScreenIndex = i
-                    outputConfig.selectedSliceIndex = 0
-                } label: {
-                    Text(screen.name)
-                        .font(.system(size: sf(9, sc), weight: .black, design: .monospaced))
-                        .foregroundColor(outputConfig.selectedScreenIndex == i ? .white : .gray)
-                        .padding(.horizontal, scaled(8, sc)).padding(.vertical, scaled(4, sc))
-                        .background(outputConfig.selectedScreenIndex == i ? R.opacity(0.3) : Color.white.opacity(0.03))
-                        .overlay(VStack { Rectangle().fill(outputConfig.selectedScreenIndex == i ? R : Color.clear).frame(height: 2); Spacer() })
+        VStack(alignment: .leading, spacing: scaled(3, sc)) {
+            sectionHeader("SCREEN", sc)
+            HStack(spacing: scaled(2, sc)) {
+                ForEach(Array(outputConfig.screens.enumerated()), id: \.element.id) { i, screen in
+                    let sel = outputConfig.selectedScreenIndex == i
+                    Button {
+                        outputConfig.selectedScreenIndex = i
+                        outputConfig.selectedSliceIndex = 0
+                    } label: {
+                        Text(screen.name)
+                            .font(.system(size: sf(8, sc), weight: .black, design: .monospaced))
+                            .foregroundColor(sel ? .white : .gray)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, scaled(3, sc))
+                            .background(sel ? R.opacity(0.3) : Color.white.opacity(0.03))
+                            .overlay(VStack { Rectangle().fill(sel ? R : Color.clear).frame(height: scaled(2, sc)); Spacer() })
+                    }
+                    .buttonStyle(TactileButtonStyle())
                 }
-                .buttonStyle(TactileButtonStyle())
+                Button { outputConfig.addScreen() } label: {
+                    Image(systemName: "plus").font(.system(size: sf(8, sc), weight: .bold)).foregroundColor(R)
+                        .padding(scaled(3, sc))
+                }
             }
-            Button { outputConfig.addScreen() } label: {
-                Image(systemName: "plus").font(.system(size: sf(10, sc), weight: .bold)).foregroundColor(R)
-                    .padding(scaled(4, sc))
+
+            // Resolution inline
+            let idx = outputConfig.selectedScreenIndex
+            if idx < outputConfig.screens.count {
+                HStack(spacing: scaled(4, sc)) {
+                    numFieldInt("W", Binding(get: { outputConfig.screens[idx].width }, set: { outputConfig.screens[idx].width = $0 }), sc)
+                    numFieldInt("H", Binding(get: { outputConfig.screens[idx].height }, set: { outputConfig.screens[idx].height = $0 }), sc)
+                }
             }
-            Spacer()
         }
     }
 
@@ -535,27 +557,31 @@ struct AdvancedOutputView: View {
         let idx = outputConfig.selectedScreenIndex
         guard idx < outputConfig.screens.count else { return AnyView(EmptyView()) }
 
-        return AnyView(VStack(alignment: .leading, spacing: scaled(4, sc)) {
+        return AnyView(VStack(alignment: .leading, spacing: scaled(3, sc)) {
             sectionHeader("DESTINATION", sc)
-            HStack(spacing: scaled(3, sc)) {
+            // Uniform tab-style buttons — all same size
+            HStack(spacing: scaled(2, sc)) {
                 ForEach(OutputDestination.allCases) { dest in
+                    let sel = outputConfig.screens[idx].destination == dest
                     Button {
                         outputConfig.screens[idx].destination = dest
                         if dest == .ndi { outputConfig.screens[idx].ndiOutputEnabled = true }
                     } label: {
-                        VStack(spacing: scaled(2, sc)) {
-                            Image(systemName: dest.icon).font(.system(size: sf(12, sc)))
-                            Text(dest.displayName).font(.system(size: sf(7, sc), weight: .heavy, design: .monospaced))
+                        VStack(spacing: scaled(1, sc)) {
+                            Image(systemName: dest.icon).font(.system(size: sf(9, sc)))
+                            Text(dest.displayName).font(.system(size: sf(6, sc), weight: .heavy, design: .monospaced))
                         }
-                        .foregroundColor(outputConfig.screens[idx].destination == dest ? .white : .gray)
-                        .frame(maxWidth: .infinity).padding(.vertical, scaled(6, sc))
-                        .background(outputConfig.screens[idx].destination == dest ? R.opacity(0.3) : Color.white.opacity(0.03))
-                        .overlay(VStack { Rectangle().fill(outputConfig.screens[idx].destination == dest ? R : Color.clear).frame(height: 2); Spacer() })
+                        .foregroundColor(sel ? .white : .gray)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, scaled(3, sc))
+                        .background(sel ? R.opacity(0.3) : Color.white.opacity(0.03))
+                        .overlay(VStack { Rectangle().fill(sel ? R : Color.clear).frame(height: scaled(2, sc)); Spacer() })
                     }
                     .buttonStyle(TactileButtonStyle())
                 }
             }
 
+            // Display controls (only when display/fullscreen selected)
             let dest = outputConfig.screens[idx].destination
             if dest == .display || dest == .fullscreen {
                 displayOutputControls(sc, screenIndex: idx)
@@ -564,21 +590,20 @@ struct AdvancedOutputView: View {
     }
 
     private func displayOutputControls(_ sc: CGFloat, screenIndex idx: Int) -> some View {
-        VStack(alignment: .leading, spacing: scaled(4, sc)) {
+        VStack(alignment: .leading, spacing: scaled(3, sc)) {
             let displays = renderEngine.displayManager.allDisplays
             if displays.isEmpty {
-                HStack(spacing: scaled(4, sc)) {
-                    Image(systemName: "exclamationmark.triangle").font(.system(size: sf(10, sc))).foregroundColor(.yellow)
-                    Text("No displays detected").font(.system(size: sf(8, sc), weight: .heavy, design: .monospaced)).foregroundColor(.yellow.opacity(0.8))
+                HStack(spacing: scaled(3, sc)) {
+                    Image(systemName: "exclamationmark.triangle").font(.system(size: sf(8, sc))).foregroundColor(.yellow)
+                    Text("No displays").font(.system(size: sf(7, sc), weight: .heavy, design: .monospaced)).foregroundColor(.yellow.opacity(0.8))
                 }
             } else {
                 ForEach(displays) { display in
                     let isSelected = outputConfig.screens[idx].displayID == display.id
                     let isActive = isSelected && outputConfig.screens[idx].enabled
                     Button {
-                        if isSelected {
-                            outputConfig.screens[idx].enabled.toggle()
-                        } else {
+                        if isSelected { outputConfig.screens[idx].enabled.toggle() }
+                        else {
                             outputConfig.screens[idx].displayID = display.id
                             outputConfig.screens[idx].width = 1920
                             outputConfig.screens[idx].height = 1080
@@ -586,56 +611,44 @@ struct AdvancedOutputView: View {
                             openSingleWindow(id: "liveOutput")
                         }
                     } label: {
-                        HStack(spacing: scaled(4, sc)) {
-                            Circle().fill(isActive ? Color.green : Color.gray.opacity(0.4)).frame(width: scaled(8, sc), height: scaled(8, sc))
-                            Image(systemName: display.isMain ? "macbook" : "display").font(.system(size: sf(10, sc)))
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(display.name).font(.system(size: sf(8, sc), weight: .heavy, design: .monospaced))
-                                Text("\(display.width)x\(display.height)").font(.system(size: sf(7, sc), weight: .bold, design: .monospaced)).foregroundColor(.gray)
-                            }
+                        HStack(spacing: scaled(3, sc)) {
+                            Circle().fill(isActive ? Color.green : Color.gray.opacity(0.4)).frame(width: scaled(6, sc), height: scaled(6, sc))
+                            Image(systemName: display.isMain ? "macbook" : "display").font(.system(size: sf(8, sc)))
+                            Text(display.name).font(.system(size: sf(7, sc), weight: .heavy, design: .monospaced))
                             Spacer()
-                            Text(isActive ? "ON" : isSelected ? "OFF" : "").font(.system(size: sf(7, sc), weight: .black, design: .monospaced)).foregroundColor(isActive ? .green : .gray)
+                            if isSelected {
+                                Text(isActive ? "ON" : "OFF").font(.system(size: sf(6, sc), weight: .black, design: .monospaced))
+                                    .foregroundColor(isActive ? .green : .gray)
+                            }
                         }
-                        .foregroundColor(isSelected ? .white : .gray).padding(scaled(4, sc))
-                        .background(isActive ? R.opacity(0.2) : Color.white.opacity(0.02))
-                        .overlay(Rectangle().stroke(isActive ? R.opacity(0.5) : Color.clear, lineWidth: 1))
+                        .foregroundColor(isSelected ? .white : .gray)
+                        .padding(.horizontal, scaled(4, sc)).padding(.vertical, scaled(3, sc))
+                        .background(isActive ? R.opacity(0.15) : Color.white.opacity(0.02))
+                        .overlay(Rectangle().stroke(isActive ? R.opacity(0.4) : Color.clear, lineWidth: 0.5))
                     }.buttonStyle(TactileButtonStyle())
                 }
             }
 
-            HStack(spacing: scaled(4, sc)) {
+            // Open / Refresh buttons — uniform size
+            HStack(spacing: scaled(2, sc)) {
                 Button {
                     outputConfig.screens[idx].enabled = true
                     openSingleWindow(id: "liveOutput")
                 } label: {
-                    HStack(spacing: scaled(3, sc)) {
-                        Image(systemName: "rectangle.on.rectangle").font(.system(size: sf(9, sc), weight: .bold))
+                    HStack(spacing: scaled(2, sc)) {
+                        Image(systemName: "rectangle.on.rectangle").font(.system(size: sf(8, sc), weight: .bold))
                         Text("OPEN").font(.system(size: sf(7, sc), weight: .black, design: .monospaced))
-                    }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, scaled(5, sc)).background(R.opacity(0.4))
+                    }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, scaled(3, sc)).background(R.opacity(0.3))
                 }.buttonStyle(TactileButtonStyle())
 
                 Button { renderEngine.displayManager.refreshDisplays() } label: {
-                    HStack(spacing: scaled(3, sc)) {
-                        Image(systemName: "arrow.clockwise").font(.system(size: sf(9, sc), weight: .bold))
+                    HStack(spacing: scaled(2, sc)) {
+                        Image(systemName: "arrow.clockwise").font(.system(size: sf(8, sc), weight: .bold))
                         Text("REFRESH").font(.system(size: sf(7, sc), weight: .black, design: .monospaced))
-                    }.foregroundColor(R).frame(maxWidth: .infinity).padding(.vertical, scaled(5, sc)).background(R.opacity(0.1))
+                    }.foregroundColor(R).frame(maxWidth: .infinity).padding(.vertical, scaled(3, sc)).background(R.opacity(0.08))
                 }.buttonStyle(TactileButtonStyle())
             }
         }
-    }
-
-    // MARK: - Screen Settings
-
-    private func screenSettings(_ sc: CGFloat) -> some View {
-        let idx = outputConfig.selectedScreenIndex
-        guard idx < outputConfig.screens.count else { return AnyView(EmptyView()) }
-        return AnyView(VStack(alignment: .leading, spacing: scaled(3, sc)) {
-            sectionHeader("SCREEN", sc)
-            HStack(spacing: scaled(6, sc)) {
-                numFieldInt("W", Binding(get: { outputConfig.screens[idx].width }, set: { outputConfig.screens[idx].width = $0 }), sc)
-                numFieldInt("H", Binding(get: { outputConfig.screens[idx].height }, set: { outputConfig.screens[idx].height = $0 }), sc)
-            }
-        })
     }
 
     // MARK: - Slice List

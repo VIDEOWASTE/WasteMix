@@ -6,8 +6,8 @@ struct MixerView: View {
     let inputManager: InputManager
 
     @State private var crossfaderPos: Float = 0.5
-    @State private var crossfaderA: Int = 0
-    @State private var crossfaderB: Int = 1
+    @State private var crossfaderA: Set<Int> = [0]
+    @State private var crossfaderB: Set<Int> = [1]
     // bpm is on mixerState.bpm
     @State private var presetManager = PresetManager()
     @State private var showGlobalColor = false
@@ -181,16 +181,11 @@ struct MixerView: View {
 
     private func openAdvancedOutput() {
         // Only allow one Advanced Output window — focus existing or open new
-        for scene in UIApplication.shared.connectedScenes {
-            if let ws = scene as? UIWindowScene {
-                let title = ws.title ?? ""
-                let activity = ws.session.stateRestorationActivity?.activityType ?? ""
-                if title.contains("Advanced") || activity.contains("advancedOutput") {
-                    // Already open — just activate it
-                    ws.windows.first?.makeKeyAndVisible()
-                    return
-                }
-            }
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        // The first scene is the mixer. Any additional scene is the advanced output.
+        if scenes.count > 1, let existing = scenes.dropFirst().first {
+            existing.windows.first?.makeKeyAndVisible()
+            return
         }
         openWindow(id: "advancedOutput")
     }
@@ -425,11 +420,14 @@ struct MixerView: View {
                 VStack(spacing: 4) {
                     mstLabel("CROSSFADER")
 
-                    // A selector
+                    // A selector — multi-select
                     HStack(spacing: 2) {
                         Text("A").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(R.opacity(0.5)).frame(width: 12)
                         ForEach(0..<4) { i in
-                            chSelectBtn(i, selected: crossfaderA == i) { crossfaderA = i }
+                            chSelectBtn(i, selected: crossfaderA.contains(i)) {
+                                if crossfaderA.contains(i) { crossfaderA.remove(i) }
+                                else { crossfaderA.insert(i) }
+                            }
                         }
                     }
 
@@ -446,17 +444,18 @@ struct MixerView: View {
                         .contentShape(Rectangle())
                         .gesture(DragGesture(minimumDistance: 0).onChanged { v in
                             crossfaderPos = max(0, min(1, Float(v.location.x / geo.size.width)))
-                            guard crossfaderA != crossfaderB else { return }
-                            mixerState.channels[crossfaderA].faderLevel = 1.0 - crossfaderPos
-                            mixerState.channels[crossfaderB].faderLevel = crossfaderPos
+                            applyCrossfader()
                         })
                     }.frame(height: 24)
 
-                    // B selector
+                    // B selector — multi-select
                     HStack(spacing: 2) {
                         Text("B").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(R.opacity(0.5)).frame(width: 12)
                         ForEach(0..<4) { i in
-                            chSelectBtn(i, selected: crossfaderB == i) { crossfaderB = i }
+                            chSelectBtn(i, selected: crossfaderB.contains(i)) {
+                                if crossfaderB.contains(i) { crossfaderB.remove(i) }
+                                else { crossfaderB.insert(i) }
+                            }
                         }
                     }
 
@@ -572,6 +571,23 @@ struct MixerView: View {
     private func mstLabel(_ text: String) -> some View {
         Text(text).font(.system(size: 6, weight: .heavy, design: .monospaced))
             .foregroundColor(R.opacity(0.35)).tracking(1)
+    }
+
+    private func applyCrossfader() {
+        let aLevel: Float = 1.0 - crossfaderPos
+        let bLevel: Float = crossfaderPos
+        for i in 0..<mixerState.channels.count {
+            let inA = crossfaderA.contains(i)
+            let inB = crossfaderB.contains(i)
+            if inA && inB {
+                mixerState.channels[i].faderLevel = max(aLevel, bLevel)
+            } else if inA {
+                mixerState.channels[i].faderLevel = aLevel
+            } else if inB {
+                mixerState.channels[i].faderLevel = bLevel
+            }
+            // Channels not in either bus keep their manual fader level
+        }
     }
 
     private func chSelectBtn(_ i: Int, selected: Bool, action: @escaping () -> Void) -> some View {

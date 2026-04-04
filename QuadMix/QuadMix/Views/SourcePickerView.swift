@@ -25,28 +25,24 @@ struct SourcePickerView: View {
                         }
                     }
 
-                    // Test Patterns
-                    sourceSection("Test Patterns") {
-                        ForEach(PatternType.allCases) { pattern in
-                            sourceRow(icon: "checkerboard.rectangle", label: pattern.displayName, tint: .purple) {
-                                selectSource(.pattern(pattern))
+                    // NDI Sources
+                    sourceSection("NDI Network Sources") {
+                        if inputManager.discoveredNDISources.isEmpty {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                Text("Scanning local network...")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.vertical, 6)
+                        } else {
+                            ForEach(inputManager.discoveredNDISources, id: \.name) { source in
+                                sourceRow(icon: "network", label: source.name, tint: .cyan) {
+                                    selectSource(.ndi(sourceName: source.name, ipAddress: source.address))
+                                }
                             }
                         }
-                    }
-
-                    // Solid Colors
-                    sourceSection("Solid Colors") {
-                        HStack(spacing: 8) {
-                            colorSwatch(.black, r: 0, g: 0, b: 0)
-                            colorSwatch(.white, r: 1, g: 1, b: 1)
-                            colorSwatch(.red, r: 1, g: 0, b: 0)
-                            colorSwatch(.green, r: 0, g: 1, b: 0)
-                            colorSwatch(.blue, r: 0, g: 0, b: 1)
-                            colorSwatch(.yellow, r: 1, g: 1, b: 0)
-                            colorSwatch(.cyan, r: 0, g: 1, b: 1)
-                            colorSwatch(.orange, r: 1, g: 0.5, b: 0)
-                        }
-                        .padding(.vertical, 4)
                     }
 
                     // Video
@@ -101,22 +97,27 @@ struct SourcePickerView: View {
                         }
                     }
 
-                    // NDI Sources
-                    sourceSection("NDI Network Sources") {
-                        if inputManager.discoveredNDISources.isEmpty {
-                            HStack(spacing: 8) {
-                                ProgressView()
-                                    .scaleEffect(0.7)
-                                Text("Scanning local network...")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.vertical, 6)
-                        } else {
-                            ForEach(inputManager.discoveredNDISources, id: \.name) { source in
-                                sourceRow(icon: "network", label: source.name, tint: .cyan) {
-                                    selectSource(.ndi(sourceName: source.name, ipAddress: source.address))
-                                }
+                    // Solid Colors
+                    sourceSection("Solid Colors") {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 6) {
+                            colorSwatch("BLK", .black, r: 0, g: 0, b: 0)
+                            colorSwatch("WHT", .white, r: 1, g: 1, b: 1)
+                            colorSwatch("RED", Color(red: 1.0, green: 0.15, blue: 0.15), r: 1, g: 0, b: 0)
+                            colorSwatch("GRN", Color(red: 0.15, green: 0.85, blue: 0.3), r: 0, g: 1, b: 0)
+                            colorSwatch("BLU", Color(red: 0.2, green: 0.4, blue: 1.0), r: 0, g: 0, b: 1)
+                            colorSwatch("YLW", Color(red: 1.0, green: 0.9, blue: 0.1), r: 1, g: 1, b: 0)
+                            colorSwatch("CYN", Color(red: 0.1, green: 0.9, blue: 0.9), r: 0, g: 1, b: 1)
+                            colorSwatch("MAG", Color(red: 1.0, green: 0.2, blue: 0.8), r: 1, g: 0, b: 1)
+                        }
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 8)
+                    }
+
+                    // Test Patterns
+                    sourceSection("Test Patterns") {
+                        ForEach(PatternType.allCases) { pattern in
+                            sourceRow(icon: "checkerboard.rectangle", label: pattern.displayName, tint: .purple) {
+                                selectSource(.pattern(pattern))
                             }
                         }
                     }
@@ -157,7 +158,11 @@ struct SourcePickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(Color(red: 1.0, green: 0.15, blue: 0.15))
+                    }
                 }
             }
             .onChange(of: selectedVideoItem) { _, newItem in
@@ -215,16 +220,23 @@ struct SourcePickerView: View {
         .buttonStyle(.plain)
     }
 
-    private func colorSwatch(_ color: Color, r: Float, g: Float, b: Float) -> some View {
+    private func colorSwatch(_ label: String, _ color: Color, r: Float, g: Float, b: Float) -> some View {
         Button {
             selectSource(.solidColor(red: r, green: g, blue: b))
         } label: {
-            Circle()
-                .fill(color)
-                .frame(width: 30, height: 30)
-                .overlay(
-                    Circle().stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
+            VStack(spacing: 3) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(color)
+                    .frame(height: 28)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    )
+                    .shadow(color: color.opacity(0.4), radius: 3)
+                Text(label)
+                    .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                    .foregroundColor(.gray)
+            }
         }
     }
 

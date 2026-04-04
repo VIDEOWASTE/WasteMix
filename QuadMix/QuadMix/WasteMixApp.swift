@@ -19,9 +19,9 @@ class WasteMixAppDelegate: NSObject, UIApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             for scene in application.connectedScenes {
                 if let ws = scene as? UIWindowScene {
-                    ws.sizeRestrictions?.minimumSize = CGSize(width: 320, height: 260)
+                    ws.sizeRestrictions?.minimumSize = CGSize(width: 360, height: 500)
                     let geo = UIWindowScene.GeometryPreferences.Mac(
-                        systemFrame: CGRect(x: 60, y: 60, width: 320, height: 260)
+                        systemFrame: CGRect(x: 60, y: 40, width: 420, height: 600)
                     )
                     ws.requestGeometryUpdate(geo) { _ in }
                     break // only the first (mixer) window
@@ -37,10 +37,10 @@ class WasteMixAppDelegate: NSObject, UIApplicationDelegate {
         let config = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
 
         // If app hasn't finished launching yet, only allow the first scene (mixer)
+        // existingCount > 1 means a scene is already connected — this one is secondary
         if !Self.appDidFinishLaunching {
             let existingCount = application.connectedScenes.count
-            if existingCount > 0 {
-                // This is a restored secondary scene — reject it by destroying after connection
+            if existingCount > 1 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     application.requestSceneSessionDestruction(connectingSceneSession, options: nil)
                 }
@@ -75,6 +75,7 @@ struct WasteMixApp: App {
                 }
             }
             .preferredColorScheme(.dark)
+            .tint(Color(red: 1.0, green: 0.15, blue: 0.15))
         }
 
         // Advanced Output — only opens via button
@@ -90,16 +91,17 @@ struct WasteMixApp: App {
                 }
             }
             .preferredColorScheme(.dark)
+            .tint(Color(red: 1.0, green: 0.15, blue: 0.15))
             .onAppear {
                 #if targetEnvironment(macCatalyst)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     for scene in UIApplication.shared.connectedScenes {
                         if let ws = scene as? UIWindowScene,
                            ws.title?.contains("Advanced") == true || ws.session.stateRestorationActivity?.activityType.contains("advancedOutput") == true {
-                            ws.sizeRestrictions?.minimumSize = CGSize(width: 500, height: 350)
-                            ws.sizeRestrictions?.maximumSize = CGSize(width: 3000, height: 2000)
+                            ws.sizeRestrictions?.minimumSize = CGSize(width: 280, height: 200)
+                            ws.sizeRestrictions?.maximumSize = CGSize(width: 2000, height: 1400)
                             let geo = UIWindowScene.GeometryPreferences.Mac(
-                                systemFrame: CGRect(x: 80, y: 80, width: 750, height: 480)
+                                systemFrame: CGRect(x: 500, y: 40, width: 380, height: 280)
                             )
                             ws.requestGeometryUpdate(geo) { _ in }
                         }

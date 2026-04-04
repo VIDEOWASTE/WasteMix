@@ -38,31 +38,69 @@ final class AudioEngine {
     func start() {
         guard !isRunning else { return }
 
+        // Just start — permission is handled by the system dialog automatically
+        // on Mac Catalyst when we access the input node
+        startEngine()
+    }
+
+    private func startEngine() {
+        #if !targetEnvironment(macCatalyst)
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.playAndRecord, options: [.defaultToSpeaker, .mixWithOthers])
             try session.setActive(true)
         } catch {
-            return
+            NSLog("[AudioEngine] Audio session error: %@", error.localizedDescription)
         }
+        #endif
 
         engine = AVAudioEngine()
         guard let engine = engine else { return }
 
         let input = engine.inputNode
-        let format = input.outputFormat(forBus: 0)
+
+        // Try outputFormat first (standard), then inputFormat as fallback
+        var format = input.outputFormat(forBus: 0)
+        if format.sampleRate == 0 || format.channelCount == 0 {
+            format = input.inputFormat(forBus: 0)
+        }
+
+        NSLog("[AudioEngine] Using format: sr=%.0f ch=%d", format.sampleRate, format.channelCount)
+
+        guard format.sampleRate > 0 && format.channelCount > 0 else {
+            NSLog("[AudioEngine] No valid audio input format available")
+            return
+        }
+
         let halfFFT = fftSize / 2
 
-        input.installTap(onBus: 0, bufferSize: AVAudioFrameCount(fftSize), format: format) { [weak self] buffer, _ in
+        // Install tap with nil format to let the system choose
+        input.installTap(onBus: 0, bufferSize: AVAudioFrameCount(fftSize), format: nil) { [weak self] buffer, _ in
             guard let self = self else { return }
-            self.processBuffer(buffer, sampleRate: Float(format.sampleRate), halfFFT: halfFFT)
+            let sr = Float(buffer.format.sampleRate)
+            self.processBuffer(buffer, sampleRate: sr > 0 ? sr : Float(format.sampleRate), halfFFT: halfFFT)
         }
 
         do {
             try engine.start()
             isRunning = true
+            NSLog("[AudioEngine] Started OK, sr=%.0f", format.sampleRate)
         } catch {
-            isRunning = false
+            NSLog("[AudioEngine] Start failed: %@", error.localizedDescription)
+            // Try once more without the tap format constraint
+            input.removeTap(onBus: 0)
+            input.installTap(onBus: 0, bufferSize: AVAudioFrameCount(fftSize), format: format) { [weak self] buffer, _ in
+                guard let self = self else { return }
+                self.processBuffer(buffer, sampleRate: Float(format.sampleRate), halfFFT: halfFFT)
+            }
+            do {
+                try engine.start()
+                isRunning = true
+                NSLog("[AudioEngine] Started OK on retry")
+            } catch {
+                NSLog("[AudioEngine] Retry failed: %@", error.localizedDescription)
+                isRunning = false
+            }
         }
     }
 
