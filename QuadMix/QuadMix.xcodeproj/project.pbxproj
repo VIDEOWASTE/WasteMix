@@ -68,6 +68,7 @@
 		A10100 /* CameraHub.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10100 /* CameraHub.swift */; };
 		A10101 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B10101 /* PrivacyInfo.xcprivacy */; };
 		A10102 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10102 /* AboutView.swift */; };
+		A10103 /* ExternalDisplayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10103 /* ExternalDisplayController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -136,6 +137,7 @@
 		B10100 /* CameraHub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraHub.swift; sourceTree = "<group>"; };
 		B10101 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B10102 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		B10103 /* ExternalDisplayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalDisplayController.swift; sourceTree = "<group>"; };
 		C10000 /* WasteMix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WasteMix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -270,6 +272,7 @@
 				B10040 /* Haptics.swift */,
 				B10056 /* UIScale.swift */,
 				B10061 /* DisplayManager.swift */,
+				B10103 /* ExternalDisplayController.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -431,6 +434,7 @@
 				A10037 /* Haptics.swift in Sources */,
 				A10038 /* WasteMixLogo.swift in Sources */,
 				A10102 /* AboutView.swift in Sources */,
+				A10103 /* ExternalDisplayController.swift in Sources */,
 				A10039 /* ChannelEffect.swift in Sources */,
 				A10040 /* MixerPreset.swift in Sources */,
 				A10041 /* Effects.metal in Sources */,

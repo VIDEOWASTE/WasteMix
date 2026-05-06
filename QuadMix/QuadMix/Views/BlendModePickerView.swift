@@ -105,6 +105,15 @@ struct BlendModePickerView: View {
     }
 }
 
+/// Standard "liquid" text treatment used across the UI so a label always
+/// stays on a single line and shrinks down before wrapping. Apply to any
+/// Text inside a width-constrained container.
+extension View {
+    func oneLine(minScale: CGFloat = 0.6) -> some View {
+        self.lineLimit(1).minimumScaleFactor(minScale)
+    }
+}
+
 /// Shared button style with scale feedback for tactile feel
 struct TactileButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {

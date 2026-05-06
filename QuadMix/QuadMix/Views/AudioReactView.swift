@@ -125,16 +125,21 @@ struct AudioReactView: View {
                     }
                 }
 
-                // Quick presets
-                HStack(spacing: 4) {
-                    Text("PRESETS").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(.gray)
-                    Spacer()
-                    eqPresetBtn("KICK") { setGains([1, 0.8, 0, 0, 0, 0, 0]) }
-                    eqPresetBtn("BASS") { setGains([0.5, 1, 0.5, 0, 0, 0, 0]) }
-                    eqPresetBtn("VOCAL") { setGains([0, 0, 0.3, 1, 0.8, 0.3, 0]) }
-                    eqPresetBtn("HATS") { setGains([0, 0, 0, 0, 0.3, 0.8, 1]) }
-                    eqPresetBtn("FULL") { setGains([1, 1, 1, 1, 1, 1, 1]) }
-                    eqPresetBtn("OFF") { setGains([0, 0, 0, 0, 0, 0, 0]) }
+                // Quick presets — wrapped to two rows so they can be a real
+                // size instead of fighting for inline space.
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("PRESETS").font(.system(size: 10, weight: .heavy, design: .monospaced)).foregroundColor(.gray)
+                    HStack(spacing: 6) {
+                        eqPresetBtn("KICK") { setGains([1, 0.8, 0, 0, 0, 0, 0]) }
+                        eqPresetBtn("BASS") { setGains([0.5, 1, 0.5, 0, 0, 0, 0]) }
+                        eqPresetBtn("VOCAL") { setGains([0, 0, 0.3, 1, 0.8, 0.3, 0]) }
+                        eqPresetBtn("HATS") { setGains([0, 0, 0, 0, 0.3, 0.8, 1]) }
+                    }
+                    HStack(spacing: 6) {
+                        eqPresetBtn("FULL") { setGains([1, 1, 1, 1, 1, 1, 1]) }
+                        eqPresetBtn("OFF") { setGains([0, 0, 0, 0, 0, 0, 0]) }
+                        Spacer()
+                    }
                 }
             }
         }
@@ -190,10 +195,12 @@ struct AudioReactView: View {
 
     private func eqPresetBtn(_ label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(label).font(.system(size: 6, weight: .heavy, design: .monospaced))
+            Text(label).font(.system(size: 12, weight: .black, design: .monospaced))
                 .foregroundColor(accentColor)
-                .padding(.horizontal, 5).padding(.vertical, 3)
-                .background(Rectangle().fill(accentColor.opacity(0.1)))
+                .frame(minWidth: 64)
+                .padding(.horizontal, 12).padding(.vertical, 10)
+                .background(Rectangle().fill(accentColor.opacity(0.15)))
+                .overlay(Rectangle().stroke(accentColor.opacity(0.4), lineWidth: 0.5))
         }.buttonStyle(TactileButtonStyle())
     }
 

@@ -11,6 +11,10 @@ struct MixerView: View {
     @State private var showGlobalColor = false
     @State private var showPresets = false
     @State private var showAbout = false
+    /// Snapshot of channel faders captured the moment the user hits FADE TO
+    /// BLACK, so RECALL can restore them. `nil` means there's nothing to
+    /// recall (no fade has happened, or the user has touched faders since).
+    @State private var preFadeLevels: [Float]? = nil
 
     // Unified panel system — replaces all sheets
     enum PanelType: Equatable {
@@ -265,17 +269,23 @@ struct MixerView: View {
         let c = cc[i]
 
         return VStack(spacing: 0) {
-            // Header — colored top edge + channel info
-            Rectangle().fill(c).frame(height: 2) // hard color bar at top
+            // Header — fatter colored top bar when this channel is the
+            // active preview, plus a saturated background, so the PVW
+            // selection reads at a glance instead of needing the user to
+            // hunt for the small "PVW" label.
+            Rectangle().fill(c).frame(height: sel ? 5 : 2)
+                .shadow(color: sel ? c.opacity(0.6) : .clear, radius: 4)
             Button { mixerState.selectedPreviewChannel = i; Haptics.tap() } label: {
-                HStack(spacing: 0) {
+                HStack(spacing: 4) {
                     Text("CH\(i+1)")
-                        .font(.system(size: 11, weight: .black, design: .monospaced))
-                        .foregroundColor(.white)
+                        .font(.system(size: 12, weight: .black, design: .monospaced))
+                        .foregroundColor(sel ? .white : .white.opacity(0.85))
                     if sel {
-                        Text(" PVW")
-                            .font(.system(size: 7, weight: .black, design: .monospaced))
-                            .foregroundColor(R)
+                        Text("PVW")
+                            .font(.system(size: 9, weight: .black, design: .monospaced))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 4).padding(.vertical, 1)
+                            .background(R)
                     }
                     Spacer()
                     Text("\(Int(ch.faderLevel * 100))")
@@ -283,7 +293,10 @@ struct MixerView: View {
                         .foregroundColor(c)
                 }
                 .padding(.horizontal, 5).padding(.vertical, 4)
-                .background(Color.white.opacity(sel ? 0.04 : 0.015))
+                .background(sel ? c.opacity(0.18) : Color.white.opacity(0.015))
+                .overlay(
+                    Rectangle().stroke(sel ? c : Color.clear, lineWidth: sel ? 1 : 0)
+                )
                 .contentShape(Rectangle())
             }.buttonStyle(.plain)
             edge(c)
@@ -552,26 +565,64 @@ struct MixerView: View {
 
                     Rectangle().fill(R.opacity(0.04)).frame(height: 0.5)
 
-                    // Fade to black
+                    // Fade to black + recall (restores pre-fade fader values)
                     mstCellView(label: "MASTER") {
-                        Button {
-                            for ch in mixerState.channels {
-                                if ch.faderLevel > 0.001 {
-                                    renderEngine.transitionEngine.triggerTransition(channel: ch, targetLevel: 0)
+                        HStack(spacing: 3) {
+                            // Active only when at least one channel has output
+                            // — fading to black from already-black is a no-op.
+                            let canFade = mixerState.channels.contains { $0.faderLevel > 0.001 }
+                            Button {
+                                // Snapshot current levels before fading so the
+                                // user can recall them. Skip channels already
+                                // at 0 — recalling a true-zero is pointless.
+                                preFadeLevels = mixerState.channels.map { $0.faderLevel }
+                                for ch in mixerState.channels {
+                                    if ch.faderLevel > 0.001 {
+                                        renderEngine.transitionEngine.triggerTransition(channel: ch, targetLevel: 0)
+                                    }
                                 }
+                                Haptics.bump()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "moon.fill").font(.system(size: 11))
+                                    Text("FADE TO BLACK").font(.system(size: 9, weight: .black, design: .monospaced))
+                                        .tracking(0.5)
+                                        .lineLimit(1).minimumScaleFactor(0.7)
+                                }
+                                .foregroundColor(canFade ? .white : R.opacity(0.4))
+                                .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                .background(canFade ? R.opacity(0.45) : R.opacity(0.08))
+                                .overlay(Rectangle().stroke(canFade ? R : R.opacity(0.2), lineWidth: 1))
                             }
-                            Haptics.bump()
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "moon.fill").font(.system(size: 11))
-                                Text("FADE TO BLACK").font(.system(size: 8, weight: .black, design: .monospaced)).tracking(0.5)
+                            .buttonStyle(TactileButtonStyle())
+                            .disabled(!canFade)
+
+                            // RECALL — restore the snapshot. Disabled until
+                            // a fade has actually happened.
+                            let canRecall = preFadeLevels != nil
+                            Button {
+                                guard let snap = preFadeLevels else { return }
+                                for (i, level) in snap.enumerated() where i < mixerState.channels.count {
+                                    if level > 0.001 {
+                                        renderEngine.transitionEngine.triggerTransition(channel: mixerState.channels[i], targetLevel: level)
+                                    }
+                                }
+                                preFadeLevels = nil
+                                Haptics.thud()
+                            } label: {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "arrow.uturn.backward").font(.system(size: 11))
+                                    Text("RECALL").font(.system(size: 9, weight: .black, design: .monospaced))
+                                        .lineLimit(1).minimumScaleFactor(0.7)
+                                }
+                                .foregroundColor(canRecall ? .white : R.opacity(0.4))
+                                .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                .background(canRecall ? R.opacity(0.45) : R.opacity(0.08))
+                                .overlay(Rectangle().stroke(canRecall ? R : R.opacity(0.2), lineWidth: 1))
                             }
-                            .foregroundColor(R)
-                            .frame(maxWidth: .infinity).padding(.vertical, 10)
-                            .background(R.opacity(0.3))
-                            .overlay(Rectangle().stroke(R.opacity(0.4), lineWidth: 1))
+                            .buttonStyle(TactileButtonStyle())
+                            .disabled(!canRecall)
                         }
-                        .buttonStyle(TactileButtonStyle())
                     }
 
                     Rectangle().fill(R.opacity(0.04)).frame(height: 0.5)
@@ -639,7 +690,6 @@ struct MixerView: View {
             }
         }
         .background(Color(red: 0.04, green: 0.04, blue: 0.05))
-        .overlay(Rectangle().stroke(R.opacity(0.4), lineWidth: 1))
     }
 
     // MARK: - Helpers

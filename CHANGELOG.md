@@ -8,17 +8,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+---
+
+## [0.0.3] — 2026-05-06
+
+Polish pass on top of the first TestFlight build: external-display fullscreen, master-section RECALL/FADE pair, audio-react default-on, and a pile of UI/touch-target tightening.
+
 ### Added
--
+- `ExternalDisplayController` — when the user picks a non-main display in Advanced Output, the program output is rendered fullscreen on that display via a dedicated `UIWindow` on the external `UIScreen`. No mouse needed, no manual fullscreen gesture; auto-attaches when an HDMI/USB-C display connects mid-session and tears down on unplug.
+- `.oneLine()` view modifier (in `BlendModePickerView.swift`) — convenience for `lineLimit(1) + minimumScaleFactor` to keep text on one line throughout the liquid UI without re-typing the modifier chain everywhere.
+- "RECALL" button in the master section next to FADE TO BLACK — captures channel fader levels at fade time and transitions them back when pressed. Disabled until a fade has actually happened.
+- FADE TO BLACK button now uses the same enabled/disabled visual pair as RECALL: greyed out and non-tappable when every channel is already at 0 (nothing to fade from), bright red when at least one channel has output.
 
 ### Changed
--
-
-### Fixed
--
+- "OPEN" button in the destination picker now routes to the external display via the new controller when one's connected; falls back to the existing in-window `liveOutput` `WindowGroup` when no external display is attached.
+- Display picker rows, destination picker, and slice list rows in Advanced Output all bumped to bigger touch targets (rows ~9pt vertical padding, 12pt fonts, 14–16pt icons, larger status dots).
+- Selected PVW channel reads at a glance — top color bar fattens 2→5pt with a colored glow, header gets a tinted background + colored border, and the "PVW" label is a filled red pill.
+- Audio React EQ band gains default to all-7-full (`[1, 1, 1, 1, 1, 1, 1]`) so toggling reactivity on immediately produces visible motion instead of looking broken.
+- Audio React preset buttons (KICK / BASS / VOCAL / HATS / FULL / OFF) substantially bigger — 12pt label, 64pt min-width, 10pt vertical padding; wrapped to two rows so they have proper breathing room.
+- Removed the red border around the master section on the main mixer; the red top bar above MASTER stays as the section indicator.
+- Slice list rows in Advanced Output force-fit their labels to one line: slice name, source chip ("PROGRAM" / "CH 1" / etc.), MESH grid label, and size percentage all use `lineLimit(1)` + `minimumScaleFactor` so they shrink instead of wrapping when the panel is narrow.
 
 ### Removed
--
+- "OPEN" and "REFRESH" buttons in the display destination panel — tapping a display row already toggles activation, and `UIScreen.didConnectNotification` auto-refreshes the list.
+
+### Fixed
+- Luma key / chroma key changing the threshold/softness/hue had no visible effect when applied to the base channel or with PIP active. `fragment_passthrough_opacity` and `fragment_pip` now multiply by `color.a`, so the alpha computed by `key_luma` / `key_chroma` actually drives transparency through the rest of the compositor.
+- Deselecting a Main Display destination in Advanced Output now also closes the `liveOutput` window. Previously the window stayed open after the toggle was flipped off.
+- Tapping "ADVANCED OUTPUT MAPPING" within ~2 seconds of cold launch made the window flash open and immediately grey out — the AppDelegate's secondary-scene destruction gate (originally added to suppress state-restored aux scenes when the engine was still lazy) was killing the user-initiated scene too. Gate now only fires for scenes with a `stateRestorationActivity`, so user-tapped opens go through cleanly on first try.
 
 ---
 
@@ -97,6 +114,7 @@ Initial public commit. Mac Catalyst + Windows DirectX builds.
 - Mac Catalyst app shipped as `WasteMix.app`.
 - Windows DirectX 12 / C++ port skeleton (`WasteMixWindows/`).
 
-[Unreleased]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/VIDEOWASTE/WasteMix/releases/tag/v0.0.1

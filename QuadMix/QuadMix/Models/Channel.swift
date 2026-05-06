@@ -23,8 +23,10 @@ struct AudioReactSettings {
     var enabled: Bool = false
     var target: AudioReactTarget = .opacity
 
-    /// Which frequency bands this channel reacts to (0-6), and their gain
-    var bandGains: [Float] = [0, 0, 0, 0, 0, 0, 0]  // 7 bands, 0 = off, 1 = full
+    /// Which frequency bands this channel reacts to (0-6), and their gain.
+    /// Default to all-bands-full so toggling Audio React on immediately
+    /// produces visible reactivity instead of looking broken.
+    var bandGains: [Float] = [1, 1, 1, 1, 1, 1, 1]
 
     /// Smoothing: 0 = instant (jumpy), 1 = very smooth (slow response)
     var smoothing: Float = 0.3

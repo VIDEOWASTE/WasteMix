@@ -45,14 +45,17 @@ class WasteMixAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
         let config = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
 
-        // If app hasn't finished launching yet, only allow the first scene (mixer)
-        // existingCount > 1 means a scene is already connected — this one is secondary
-        if !Self.appDidFinishLaunching {
-            let existingCount = application.connectedScenes.count
-            if existingCount > 1 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    application.requestSceneSessionDestruction(connectingSceneSession, options: nil)
-                }
+        // On cold launch, suppress *state-restored* auxiliary scenes only —
+        // earlier this also ate user-tapped "Advanced Output" / "Output"
+        // openWindow calls during the first 2 seconds, which made the window
+        // flash open and grey out (had to tap again to actually keep it).
+        // User-initiated openWindow scenes have no stateRestorationActivity,
+        // so this guard now only catches the OS-level restoration path.
+        if !Self.appDidFinishLaunching,
+           connectingSceneSession.stateRestorationActivity != nil,
+           application.connectedScenes.count > 1 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                application.requestSceneSessionDestruction(connectingSceneSession, options: nil)
             }
         }
 

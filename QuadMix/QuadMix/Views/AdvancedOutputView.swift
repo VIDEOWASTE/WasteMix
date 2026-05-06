@@ -7,6 +7,7 @@ struct AdvancedOutputView: View {
     let outputConfig: OutputConfig
     let renderEngine: RenderEngine
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
         GeometryReader { geo in
@@ -875,27 +876,26 @@ struct AdvancedOutputView: View {
         let idx = outputConfig.selectedScreenIndex
         guard idx < outputConfig.screens.count else { return AnyView(EmptyView()) }
 
-        return AnyView(VStack(alignment: .leading, spacing: scaled(3, sc)) {
+        return AnyView(VStack(alignment: .leading, spacing: 6) {
             sectionHeader("DESTINATION", sc)
-            // Uniform tab-style buttons — all same size
-            HStack(spacing: scaled(2, sc)) {
+            HStack(spacing: 3) {
                 ForEach(OutputDestination.allCases) { dest in
                     let sel = outputConfig.screens[idx].destination == dest
                     Button {
                         outputConfig.screens[idx].destination = dest
                         if dest == .ndi { outputConfig.screens[idx].ndiOutputEnabled = true }
                     } label: {
-                        VStack(spacing: scaled(1, sc)) {
-                            Image(systemName: dest.icon).font(.system(size: sf(9, sc)))
-                            Text(dest.displayName).font(.system(size: sf(6, sc), weight: .heavy, design: .monospaced))
+                        VStack(spacing: 3) {
+                            Image(systemName: dest.icon).font(.system(size: 14, weight: .semibold))
+                            Text(dest.displayName).font(.system(size: 9, weight: .heavy, design: .monospaced))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.6)
                         }
                         .foregroundColor(sel ? .white : .gray)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, scaled(3, sc))
-                        .background(sel ? R.opacity(0.3) : Color.white.opacity(0.03))
-                        .overlay(VStack { Rectangle().fill(sel ? R : Color.clear).frame(height: scaled(2, sc)); Spacer() })
+                        .padding(.vertical, 9)
+                        .background(sel ? R.opacity(0.3) : Color.white.opacity(0.04))
+                        .overlay(VStack { Rectangle().fill(sel ? R : Color.clear).frame(height: 2); Spacer() })
                     }
                     .buttonStyle(TactileButtonStyle())
                 }
@@ -922,52 +922,58 @@ struct AdvancedOutputView: View {
                     let isSelected = outputConfig.screens[idx].displayID == display.id
                     let isActive = isSelected && outputConfig.screens[idx].enabled
                     Button {
-                        if isSelected { outputConfig.screens[idx].enabled.toggle() }
-                        else {
+                        if isSelected {
+                            outputConfig.screens[idx].enabled.toggle()
+                            if outputConfig.screens[idx].enabled {
+                                pushToDisplay(screenIndex: idx, isExternal: !display.isMain)
+                            } else {
+                                // Close whichever output is up — external
+                                // window OR the in-window liveOutput scene.
+                                ExternalDisplayController.shared.hide()
+                                dismissWindow(id: "liveOutput")
+                            }
+                        } else {
                             outputConfig.screens[idx].displayID = display.id
                             outputConfig.screens[idx].width = 1920
                             outputConfig.screens[idx].height = 1080
                             outputConfig.screens[idx].enabled = true
-                            openSingleWindow(id: "liveOutput")
+                            pushToDisplay(screenIndex: idx, isExternal: !display.isMain)
                         }
                     } label: {
-                        HStack(spacing: scaled(3, sc)) {
-                            Circle().fill(isActive ? Color.green : Color.gray.opacity(0.4)).frame(width: scaled(6, sc), height: scaled(6, sc))
-                            Image(systemName: display.isMain ? "macbook" : "display").font(.system(size: sf(8, sc)))
-                            Text(display.name).font(.system(size: sf(7, sc), weight: .heavy, design: .monospaced))
+                        HStack(spacing: 8) {
+                            Circle().fill(isActive ? Color.green : Color.gray.opacity(0.4)).frame(width: 10, height: 10)
+                            Image(systemName: display.isMain ? "macbook" : "display").font(.system(size: 16, weight: .semibold))
+                            Text(display.name).font(.system(size: 12, weight: .heavy, design: .monospaced))
+                                .lineLimit(1).minimumScaleFactor(0.7)
                             Spacer()
                             if isSelected {
-                                Text(isActive ? "ON" : "OFF").font(.system(size: sf(6, sc), weight: .black, design: .monospaced))
+                                Text(isActive ? "ON" : "OFF").font(.system(size: 11, weight: .black, design: .monospaced))
                                     .foregroundColor(isActive ? .green : .gray)
                             }
                         }
                         .foregroundColor(isSelected ? .white : .gray)
-                        .padding(.horizontal, scaled(4, sc)).padding(.vertical, scaled(3, sc))
-                        .background(isActive ? R.opacity(0.15) : Color.white.opacity(0.02))
-                        .overlay(Rectangle().stroke(isActive ? R.opacity(0.4) : Color.clear, lineWidth: 0.5))
+                        .padding(.horizontal, 10).padding(.vertical, 10)
+                        .background(isActive ? R.opacity(0.18) : Color.white.opacity(0.04))
+                        .overlay(Rectangle().stroke(isActive ? R.opacity(0.5) : Color.white.opacity(0.10), lineWidth: 0.5))
                     }.buttonStyle(TactileButtonStyle())
                 }
             }
 
-            // Open / Refresh buttons — uniform size
-            HStack(spacing: scaled(2, sc)) {
-                Button {
-                    outputConfig.screens[idx].enabled = true
-                    openSingleWindow(id: "liveOutput")
-                } label: {
-                    HStack(spacing: scaled(2, sc)) {
-                        Image(systemName: "rectangle.on.rectangle").font(.system(size: sf(8, sc), weight: .bold))
-                        Text("OPEN").font(.system(size: sf(7, sc), weight: .black, design: .monospaced))
-                    }.foregroundColor(.white).frame(maxWidth: .infinity).padding(.vertical, scaled(3, sc)).background(R.opacity(0.3))
-                }.buttonStyle(TactileButtonStyle())
+            // OPEN/REFRESH removed — tapping a display row toggles its
+            // active state, and `UIScreen.didConnectNotification` already
+            // refreshes the list automatically when displays are plugged in.
+        }
+    }
 
-                Button { renderEngine.displayManager.refreshDisplays() } label: {
-                    HStack(spacing: scaled(2, sc)) {
-                        Image(systemName: "arrow.clockwise").font(.system(size: sf(8, sc), weight: .bold))
-                        Text("REFRESH").font(.system(size: sf(7, sc), weight: .black, design: .monospaced))
-                    }.foregroundColor(R).frame(maxWidth: .infinity).padding(.vertical, scaled(3, sc)).background(R.opacity(0.08))
-                }.buttonStyle(TactileButtonStyle())
-            }
+    /// Route the live output to either the external display (auto-fullscreen
+    /// via `ExternalDisplayController` UIWindow) or, as a fallback, an
+    /// in-window WindowGroup scene on the iPad's main display.
+    private func pushToDisplay(screenIndex: Int, isExternal: Bool) {
+        if isExternal && ExternalDisplayController.shared.hasExternalDisplay {
+            ExternalDisplayController.shared.show(renderEngine: renderEngine, screenIndex: screenIndex)
+        } else {
+            ExternalDisplayController.shared.hide()
+            openSingleWindow(id: "liveOutput")
         }
     }
 
@@ -1009,38 +1015,38 @@ struct AdvancedOutputView: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: scaled(4, sc)) {
+                    HStack(spacing: 6) {
                         // Color bar
                         Rectangle().fill(isSel ? R : .gray.opacity(0.4))
-                            .frame(width: scaled(3, sc))
+                            .frame(width: 4)
 
-                        VStack(alignment: .leading, spacing: scaled(1, sc)) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(slice.name)
-                                .font(.system(size: sf(8, sc), weight: .black, design: .monospaced))
+                                .font(.system(size: 12, weight: .black, design: .monospaced))
                                 .foregroundColor(isSel ? .white : .gray)
-                            HStack(spacing: scaled(4, sc)) {
-                                // Source name surfaced inline so the input is
-                                // visible at a glance per slice.
+                                .lineLimit(1).minimumScaleFactor(0.6)
+                            HStack(spacing: 5) {
                                 Text(slice.sourceType.displayName.uppercased())
-                                    .font(.system(size: sf(6, sc), weight: .black, design: .monospaced))
+                                    .font(.system(size: 9, weight: .black, design: .monospaced))
                                     .foregroundColor(R)
-                                    .padding(.horizontal, scaled(3, sc)).padding(.vertical, 1)
+                                    .lineLimit(1).minimumScaleFactor(0.6).fixedSize()
+                                    .padding(.horizontal, 5).padding(.vertical, 2)
                                     .background(R.opacity(0.18))
                                 if hasMesh {
                                     Text("MESH \(slice.meshWarp.cols)x\(slice.meshWarp.rows)")
-                                        .font(.system(size: sf(5, sc), weight: .heavy, design: .monospaced))
+                                        .font(.system(size: 8, weight: .heavy, design: .monospaced))
                                         .foregroundColor(R.opacity(0.5))
+                                        .lineLimit(1).fixedSize()
                                 }
                                 Text(String(format: "%.0f%%x%.0f%%", slice.outputW * 100, slice.outputH * 100))
-                                    .font(.system(size: sf(5, sc), weight: .bold, design: .monospaced))
+                                    .font(.system(size: 8, weight: .bold, design: .monospaced))
                                     .foregroundColor(.gray.opacity(0.6))
+                                    .lineLimit(1).fixedSize()
                             }
                         }
 
                         Spacer()
 
-                        // Quick source picker — tap to cycle
-                        // PROGRAM → CH 1 → CH 2 → CH 3 → CH 4 → PROGRAM…
                         Menu {
                             ForEach(SliceSource.allCases) { src in
                                 Button {
@@ -1052,15 +1058,14 @@ struct AdvancedOutputView: View {
                             }
                         } label: {
                             Image(systemName: "arrow.triangle.swap")
-                                .font(.system(size: sf(8, sc), weight: .bold))
-                                .foregroundColor(R.opacity(0.8))
-                                .padding(scaled(3, sc))
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(R.opacity(0.85))
+                                .padding(6)
                         }
 
-                        // Enabled indicator
                         Circle()
-                            .fill(slice.enabled ? Color.green.opacity(0.6) : Color.gray.opacity(0.3))
-                            .frame(width: scaled(5, sc), height: scaled(5, sc))
+                            .fill(slice.enabled ? Color.green.opacity(0.7) : Color.gray.opacity(0.3))
+                            .frame(width: 8, height: 8)
 
                         if outputConfig.screens[idx].slices.count > 1 {
                             Button {
@@ -1072,11 +1077,11 @@ struct AdvancedOutputView: View {
                             }
                         }
                     }
-                    .padding(.vertical, scaled(4, sc))
-                    .padding(.horizontal, scaled(4, sc))
-                    .background(isSel ? R.opacity(0.12) : Color.white.opacity(0.02))
+                    .padding(.vertical, 9)
+                    .padding(.horizontal, 8)
+                    .background(isSel ? R.opacity(0.14) : Color.white.opacity(0.04))
                     .overlay(
-                        Rectangle().stroke(isSel ? R.opacity(0.3) : Color.white.opacity(0.04), lineWidth: 0.5)
+                        Rectangle().stroke(isSel ? R.opacity(0.4) : Color.white.opacity(0.08), lineWidth: 0.5)
                     )
                 }
                 .buttonStyle(.plain)

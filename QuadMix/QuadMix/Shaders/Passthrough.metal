@@ -22,14 +22,17 @@ fragment float4 fragment_passthrough(VertexOut in [[stage_in]],
     return tex.sample(s, in.texCoord);
 }
 
-// Passthrough with opacity: multiplies rgb by opacity against black background
-// Used for rendering channel 0 (base layer) so its fader controls brightness
+// Passthrough with opacity: multiplies rgb by opacity against black background.
+// Used for rendering channel 0 (base layer) so its fader controls brightness.
+// Multiplied by `color.a` so keyed-out pixels (luma/chroma key set alpha to 0)
+// render as black instead of the original color — matches the cleared black
+// canvas the base layer is painted onto.
 fragment float4 fragment_passthrough_opacity(VertexOut in [[stage_in]],
                                               texture2d<float> tex [[texture(0)]],
                                               constant BlendUniforms &uniforms [[buffer(0)]]) {
     constexpr sampler s(filter::linear, address::clamp_to_edge);
     float4 color = tex.sample(s, in.texCoord);
-    return float4(color.rgb * uniforms.opacity, 1.0);
+    return float4(color.rgb * uniforms.opacity * color.a, 1.0);
 }
 
 fragment float4 fragment_solid_color(VertexOut in [[stage_in]],
@@ -61,7 +64,9 @@ fragment float4 fragment_pip(VertexOut in [[stage_in]],
         srcUV = clamp(srcUV, float2(0.0), float2(1.0));
 
         float4 color = tex.sample(s, srcUV);
-        return float4(color.rgb * pip.opacity, pip.opacity);
+        // Preserve keyed alpha — `color.a < 1` means luma/chroma key wants
+        // this pixel transparent. Downstream blend modes multiply by this.
+        return float4(color.rgb * pip.opacity, pip.opacity * color.a);
     } else {
         // PIP / shrink: scale < 1 means the image is smaller on screen
         float2 pipCenter = float2(0.5) + offset;
@@ -75,6 +80,6 @@ fragment float4 fragment_pip(VertexOut in [[stage_in]],
 
         float2 srcUV = (uv - minBound) / (maxBound - minBound);
         float4 color = tex.sample(s, srcUV);
-        return float4(color.rgb * pip.opacity, pip.opacity);
+        return float4(color.rgb * pip.opacity, pip.opacity * color.a);
     }
 }
