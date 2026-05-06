@@ -7,11 +7,18 @@ final class NDIOutput {
     private(set) var isActive = false
     let name: String
 
-    // Pre-allocated shared-memory buffer for GPU→CPU readback (no per-frame alloc)
-    private var readbackBuffer: UnsafeMutableRawPointer?
-    private var readbackSize: Int = 0
-    private var lastWidth: Int = 0
-    private var lastHeight: Int = 0
+    // Three malloc'd buffers cycled per send. Combined with the dedicated
+    // serial sendQueue below, this lets NDIWrapper_SendVideo run off-thread
+    // without racing on a single buffer when frames pile up.
+    private static let bufferRingSize = 3
+    private var bufferRing: [UnsafeMutableRawPointer] = []
+    private var bufferRingSize: Int = 0
+    private var bufferIndex: Int = 0
+
+    /// Dedicated serial queue for NDI sends — keeps the Metal completion
+    /// thread from blocking on network/encode work, which was a major source
+    /// of the laggy NDI broadcast.
+    private let sendQueue = DispatchQueue(label: "com.wastemix.ndi.\(UUID().uuidString)", qos: .userInitiated)
 
     init(name: String) {
         self.name = name
@@ -27,39 +34,56 @@ final class NDIOutput {
         if let s = sender { NDIWrapper_DestroySender(s) }
         sender = nil
         isActive = false
-        if let buf = readbackBuffer {
-            free(buf)
-            readbackBuffer = nil
-        }
+        // Drain the queue then free buffers
+        sendQueue.sync { /* serialize after any in-flight send */ }
+        for buf in bufferRing { free(buf) }
+        bufferRing.removeAll()
+        bufferRingSize = 0
     }
 
     /// Send a shared-memory Metal texture as an NDI BGRA frame.
     /// The texture MUST have storageMode = .shared for this to work without stalls.
+    /// Caller is on a Metal completion thread; we do the GPU→CPU read here so
+    /// the readback texture is free for the next frame's blit, then dispatch
+    /// the actual NDI send onto our private serial queue.
     func sendTexture(_ texture: MTLTexture) {
-        guard isActive, let sender = sender else { return }
+        guard isActive, sender != nil else { return }
 
         let width = texture.width
         let height = texture.height
         let bytesPerRow = width * 4
         let totalBytes = height * bytesPerRow
 
-        // Ensure readback buffer is allocated
-        if readbackBuffer == nil || readbackSize != totalBytes {
-            if let old = readbackBuffer { free(old) }
-            readbackBuffer = malloc(totalBytes)
-            readbackSize = totalBytes
-            lastWidth = width
-            lastHeight = height
+        // Lazy-init the buffer ring whenever the size changes
+        if bufferRing.isEmpty || bufferRingSize != totalBytes {
+            for buf in bufferRing { free(buf) }
+            bufferRing.removeAll()
+            for _ in 0..<Self.bufferRingSize {
+                if let p = malloc(totalBytes) { bufferRing.append(p) }
+            }
+            bufferRingSize = totalBytes
+            bufferIndex = 0
         }
+        guard !bufferRing.isEmpty else { return }
 
-        guard let buf = readbackBuffer else { return }
+        let buf = bufferRing[bufferIndex]
+        bufferIndex = (bufferIndex + 1) % bufferRing.count
 
-        // Read from shared texture — this is fast because the texture is already in CPU-accessible memory
+        // Synchronous CPU read while we still hold the readback texture
+        // (called from Metal completion handler so the blit is done).
         texture.getBytes(buf, bytesPerRow: bytesPerRow,
                          from: MTLRegion(origin: MTLOrigin(), size: MTLSize(width: width, height: height, depth: 1)),
                          mipmapLevel: 0)
 
-        NDIWrapper_SendVideo(sender, buf.assumingMemoryBound(to: UInt8.self),
-                             Int32(width), Int32(height), Int32(bytesPerRow))
+        // Hand off send to our own queue. We use the async API: the NDI lib
+        // pins our buffer until the next async send fires, which is why we
+        // keep a ring of 3 — by the time we cycle back to buf[0], buf[1] and
+        // buf[2] have each been async-sent and released.
+        let s = sender
+        sendQueue.async {
+            guard let s = s else { return }
+            NDIWrapper_SendVideoAsync(s, buf.assumingMemoryBound(to: UInt8.self),
+                                      Int32(width), Int32(height), Int32(bytesPerRow))
+        }
     }
 }

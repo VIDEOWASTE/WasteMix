@@ -8,7 +8,34 @@ final class OutputRenderer {
     private let ctx = MetalContext.shared
     private var screenTextures: [UUID: MTLTexture] = [:]
     private var ndiOutputs: [UUID: NDIOutput] = [:]
-    private var ndiReadbackTexture: MTLTexture?
+
+    // Triple-buffered readback for NDI sends. The completion handler reads
+    // from a frame-specific texture so the next frame's blit can't overwrite
+    // bytes still being copied out by NDI — that race is what caused the
+    // tearing/banding artifacts in the broadcast.
+    private static let readbackRingSize = 3
+    private var ndiReadbackRing: [MTLTexture] = []
+    private var ndiReadbackIndex: Int = 0
+
+    // NDI broadcast resolution — VGA over WiFi is rock solid and still very
+    // usable for VJ projection. 1080p was saturating; 720p was OK; 640×480
+    // gives plenty of headroom.
+    private static let ndiBroadcastWidth: Int = 640
+    private static let ndiBroadcastHeight: Int = 480
+    private var ndiDownscaledTex: MTLTexture?
+
+    // Throttle NDI sends to ~30 fps. The engine ticks at 60, but 1080p60 BGRA
+    // is ~474 MB/s before NDI compression and saturates network/CPU on
+    // iPad — sending every other frame keeps the program smooth and lets
+    // receivers stay in sync.
+    private var ndiSendFrameCounter: Int = 0
+    // Engine ticks at 60fps; divisor=2 → 30fps NDI. With 640×480 the bandwidth
+    // budget is now generous so we can spend it on smoother motion.
+    private var ndiSendDivisor: Int { 2 }
+    private var shouldSendNDIThisFrame: Bool {
+        defer { ndiSendFrameCounter &+= 1 }
+        return ndiSendFrameCounter % ndiSendDivisor == 0
+    }
 
     // Cached test pattern sources (avoid recreating per frame)
     private var cachedPatternSources: [TestPatternType: PatternGeneratorSource] = [:]
@@ -20,63 +47,132 @@ final class OutputRenderer {
     /// Global NDI output for the raw program feed
     var globalNDI: NDIOutput?
 
-    /// Render all output screens from the program texture.
-    func render(programTexture: MTLTexture, config: OutputConfig, commandBuffer: MTLCommandBuffer) {
-        // Render each enabled screen
-        for screen in config.screens where screen.enabled {
+    /// Per-slice source resolution. The slice picks `programTexture` (the mix)
+    /// or one of the four channel textures. Caller passes both so the slice
+    /// renderer can route appropriately.
+    func textureForSlice(_ slice: OutputSlice,
+                         programTexture: MTLTexture,
+                         channelTextures: [MTLTexture?]) -> MTLTexture {
+        if let i = slice.sourceType.channelIndex,
+           i < channelTextures.count,
+           let tex = channelTextures[i] {
+            return tex
+        }
+        return programTexture
+    }
+
+    /// Render all output screens. `programTexture` is the mix; `channelTextures`
+    /// provides the post-processed per-channel output so slices can pull a
+    /// single channel instead of the full mix.
+    func render(programTexture: MTLTexture,
+                channelTextures: [MTLTexture?],
+                config: OutputConfig,
+                commandBuffer: MTLCommandBuffer) {
+        // Decide once per render call whether NDI sends fire this frame.
+        // Reads are stable across both per-screen and global-program paths.
+        let sendNDI = shouldSendNDIThisFrame
+
+        // Always render every screen's texture so the Advanced Output canvas
+        // preview is live; `enabled` only gates whether output is actually sent
+        // to NDI / external display.
+        for screen in config.screens {
             let target = ensureScreenTexture(screen)
 
             if screen.showTestPattern {
                 renderTestPattern(type: screen.testPatternType, to: target, commandBuffer: commandBuffer)
             } else {
-                renderScreen(screen: screen, programTexture: programTexture, to: target, commandBuffer: commandBuffer)
+                renderScreen(screen: screen,
+                             programTexture: programTexture,
+                             channelTextures: channelTextures,
+                             to: target,
+                             commandBuffer: commandBuffer)
             }
 
-            // Per-screen NDI output
-            if screen.ndiOutputEnabled && screen.destination == .ndi {
-                let readback = ensureReadbackTexture(width: target.width, height: target.height, key: screen.id)
-                blitTexture(from: target, to: readback, commandBuffer: commandBuffer)
+            // Per-screen NDI output (still gated by enabled + destination)
+            if screen.enabled && screen.ndiOutputEnabled && screen.destination == .ndi {
+                if sendNDI {
+                    let readback = ensureReadbackTexture(width: target.width, height: target.height, key: screen.id)
+                    blitTexture(from: target, to: readback, commandBuffer: commandBuffer)
 
-                let ndi = ensureNDIOutput(for: screen)
-                commandBuffer.addCompletedHandler { _ in
-                    ndi.sendTexture(readback)
+                    let ndi = ensureNDIOutput(for: screen)
+                    commandBuffer.addCompletedHandler { _ in
+                        ndi.sendTexture(readback)
+                    }
                 }
             } else {
                 stopNDIOutput(for: screen)
             }
         }
 
-        // Global NDI output (raw program feed)
-        if config.globalNDIOutput {
-            if ndiReadbackTexture == nil
-                || ndiReadbackTexture!.width != programTexture.width
-                || ndiReadbackTexture!.height != programTexture.height {
+        // Global NDI output (raw program feed) — downscaled to 720p so iPad +
+        // WiFi can sustain it. Render pass scales 1080p → 720p, then blit to
+        // a CPU-readable ring slot for the NDI library.
+        if config.globalNDIOutput && sendNDI {
+            let nw = Self.ndiBroadcastWidth
+            let nh = Self.ndiBroadcastHeight
+
+            // Lazy-init the downscale target (private storage, render target)
+            if ndiDownscaledTex == nil
+                || ndiDownscaledTex!.width != nw
+                || ndiDownscaledTex!.height != nh {
                 let desc = MTLTextureDescriptor.texture2DDescriptor(
-                    pixelFormat: .bgra8Unorm,
-                    width: programTexture.width, height: programTexture.height, mipmapped: false)
-                desc.storageMode = .shared
-                desc.usage = [.shaderRead]
-                ndiReadbackTexture = ctx.device.makeTexture(descriptor: desc)
+                    pixelFormat: .bgra8Unorm, width: nw, height: nh, mipmapped: false)
+                desc.usage = [.renderTarget, .shaderRead]
+                desc.storageMode = .private
+                ndiDownscaledTex = ctx.device.makeTexture(descriptor: desc)
             }
 
-            if let blit = commandBuffer.makeBlitCommandEncoder(), let readback = ndiReadbackTexture {
-                blit.copy(from: programTexture, sourceSlice: 0, sourceLevel: 0,
-                          sourceOrigin: MTLOrigin(), sourceSize: MTLSize(width: programTexture.width, height: programTexture.height, depth: 1),
-                          to: readback, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin())
-                blit.endEncoding()
-            }
-
-            commandBuffer.addCompletedHandler { [weak self] _ in
-                guard let self = self, let readback = self.ndiReadbackTexture else { return }
-                if self.globalNDI == nil {
-                    self.globalNDI = NDIOutput(name: config.globalNDIName)
-                    self.globalNDI?.start()
+            // Lazy-init readback ring at the broadcast resolution
+            if ndiReadbackRing.isEmpty || ndiReadbackRing[0].width != nw || ndiReadbackRing[0].height != nh {
+                ndiReadbackRing.removeAll()
+                for _ in 0..<Self.readbackRingSize {
+                    let desc = MTLTextureDescriptor.texture2DDescriptor(
+                        pixelFormat: .bgra8Unorm, width: nw, height: nh, mipmapped: false)
+                    desc.storageMode = .shared
+                    desc.usage = [.shaderRead]
+                    if let t = ctx.device.makeTexture(descriptor: desc) { ndiReadbackRing.append(t) }
                 }
-                self.globalNDI?.sendTexture(readback)
+                ndiReadbackIndex = 0
             }
-        } else {
+
+            // 1) Downscale: program → ndiDownscaledTex via passthrough render
+            if let downscale = ndiDownscaledTex {
+                let desc = MTLRenderPassDescriptor()
+                desc.colorAttachments[0].texture = downscale
+                desc.colorAttachments[0].loadAction = .dontCare
+                desc.colorAttachments[0].storeAction = .store
+                if let enc = commandBuffer.makeRenderCommandEncoder(descriptor: desc) {
+                    enc.setRenderPipelineState(ctx.passthroughPipeline)
+                    enc.setVertexBuffer(ctx.quadVertexBuffer, offset: 0, index: 0)
+                    enc.setFragmentTexture(programTexture, index: 0)
+                    enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+                    enc.endEncoding()
+                }
+
+                // 2) Blit downscaled → readback (.shared so CPU can read)
+                let readback = ndiReadbackRing[ndiReadbackIndex]
+                ndiReadbackIndex = (ndiReadbackIndex + 1) % ndiReadbackRing.count
+
+                if let blit = commandBuffer.makeBlitCommandEncoder() {
+                    blit.copy(from: downscale, sourceSlice: 0, sourceLevel: 0,
+                              sourceOrigin: MTLOrigin(), sourceSize: MTLSize(width: nw, height: nh, depth: 1),
+                              to: readback, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin())
+                    blit.endEncoding()
+                }
+
+                commandBuffer.addCompletedHandler { [weak self] _ in
+                    guard let self = self else { return }
+                    if self.globalNDI == nil {
+                        self.globalNDI = NDIOutput(name: config.globalNDIName)
+                        self.globalNDI?.start()
+                    }
+                    self.globalNDI?.sendTexture(readback)
+                }
+            }
+        } else if !config.globalNDIOutput {
             if globalNDI != nil { globalNDI?.stop(); globalNDI = nil }
         }
+        // (config.globalNDIOutput && !sendNDI) → just skip this tick, keep sender alive
     }
 
     func getScreenTexture(for screen: OutputScreen) -> MTLTexture? {
@@ -91,19 +187,26 @@ final class OutputRenderer {
 
     // MARK: - Internal
 
-    private var screenReadbackTextures: [UUID: MTLTexture] = [:]
+    private var screenReadbackRing: [UUID: [MTLTexture]] = [:]
+    private var screenReadbackIndex: [UUID: Int] = [:]
 
     private func ensureReadbackTexture(width: Int, height: Int, key: UUID) -> MTLTexture {
-        if let tex = screenReadbackTextures[key], tex.width == width, tex.height == height {
-            return tex
+        var ring = screenReadbackRing[key] ?? []
+        if ring.isEmpty || ring[0].width != width || ring[0].height != height {
+            ring.removeAll()
+            for _ in 0..<Self.readbackRingSize {
+                let desc = MTLTextureDescriptor.texture2DDescriptor(
+                    pixelFormat: .bgra8Unorm, width: width, height: height, mipmapped: false)
+                desc.storageMode = .shared
+                desc.usage = [.shaderRead]
+                if let t = ctx.device.makeTexture(descriptor: desc) { ring.append(t) }
+            }
+            screenReadbackRing[key] = ring
+            screenReadbackIndex[key] = 0
         }
-        let desc = MTLTextureDescriptor.texture2DDescriptor(
-            pixelFormat: .bgra8Unorm, width: width, height: height, mipmapped: false)
-        desc.storageMode = .shared
-        desc.usage = [.shaderRead]
-        let tex = ctx.device.makeTexture(descriptor: desc)!
-        screenReadbackTextures[key] = tex
-        return tex
+        let idx = (screenReadbackIndex[key] ?? 0) % ring.count
+        screenReadbackIndex[key] = (idx + 1) % ring.count
+        return ring[idx]
     }
 
     private func blitTexture(from src: MTLTexture, to dst: MTLTexture, commandBuffer: MTLCommandBuffer) {
@@ -116,12 +219,25 @@ final class OutputRenderer {
     }
 
     private func ensureScreenTexture(_ screen: OutputScreen) -> MTLTexture {
-        if let tex = screenTextures[screen.id], tex.width == screen.width, tex.height == screen.height {
+        // Defensive clamp — the user-facing W/H text fields don't bound their
+        // values, so a typo of 0 or 100000 reaches us here. We allocate at
+        // sane minimums/maxes rather than crash with a force-unwrap.
+        let safeW = max(64, min(screen.width, 4096))
+        let safeH = max(64, min(screen.height, 4096))
+        if let tex = screenTextures[screen.id], tex.width == safeW, tex.height == safeH {
             return tex
         }
-        let tex = ctx.makeTexture(width: screen.width, height: screen.height)!
-        screenTextures[screen.id] = tex
-        return tex
+        if let tex = ctx.makeTexture(width: safeW, height: safeH) {
+            screenTextures[screen.id] = tex
+            return tex
+        }
+        // Last-resort tiny fallback so the render pass can still proceed
+        // instead of crashing the whole engine.
+        if let fallback = ctx.makeTexture(width: 64, height: 64) {
+            screenTextures[screen.id] = fallback
+            return fallback
+        }
+        fatalError("Metal texture allocation failed for screen output")
     }
 
     private func ensureNDIOutput(for screen: OutputScreen) -> NDIOutput {
@@ -137,9 +253,12 @@ final class OutputRenderer {
         ndiOutputs.removeValue(forKey: screen.id)
     }
 
-    /// Render one output screen: composite all slices from the program
-    private func renderScreen(screen: OutputScreen, programTexture: MTLTexture,
-                              to target: MTLTexture, commandBuffer: MTLCommandBuffer) {
+    /// Render one output screen: composite all slices from their chosen sources.
+    private func renderScreen(screen: OutputScreen,
+                              programTexture: MTLTexture,
+                              channelTextures: [MTLTexture?],
+                              to target: MTLTexture,
+                              commandBuffer: MTLCommandBuffer) {
         // Clear to black
         let clearDesc = MTLRenderPassDescriptor()
         clearDesc.colorAttachments[0].texture = target
@@ -150,13 +269,15 @@ final class OutputRenderer {
             enc.endEncoding()
         }
 
-        // Render each slice
+        // Render each slice from its own picked source.
         for slice in screen.slices where slice.enabled {
-            renderSlice(slice, programTexture: programTexture, to: target, commandBuffer: commandBuffer)
+            let srcTex = textureForSlice(slice, programTexture: programTexture, channelTextures: channelTextures)
+            renderSlice(slice, programTexture: srcTex, to: target, commandBuffer: commandBuffer)
         }
     }
 
-    /// Render a single slice with corner-pin or mesh warp
+    /// Render a single slice with corner-pin or mesh warp.
+    /// `programTexture` here is the slice's chosen source (mix or channel).
     private func renderSlice(_ slice: OutputSlice, programTexture: MTLTexture,
                              to target: MTLTexture, commandBuffer: MTLCommandBuffer) {
         let desc = MTLRenderPassDescriptor()

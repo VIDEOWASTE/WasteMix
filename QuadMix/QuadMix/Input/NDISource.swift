@@ -18,6 +18,10 @@ final class NDISource: FrameProvider {
 
     private var receiver: NDIReceiverRef?
     private var receiveQueue: DispatchQueue?
+    /// Signaled by the receive loop when it has fully exited; `stop()` waits
+    /// on this with a short timeout so we don't sleep blindly for 200ms on
+    /// the calling thread (UI thread when changing channel sources).
+    private let stoppedSemaphore = DispatchSemaphore(value: 0)
 
     // Pixel buffer pool for zero-alloc frame receive
     private var pixelBufferPool: CVPixelBufferPool?
@@ -74,11 +78,15 @@ final class NDISource: FrameProvider {
     private var cAddr: UnsafeMutablePointer<CChar>?
 
     func stop() {
+        guard isActive else { return }
         isActive = false
         receiveQueue = nil
 
-        // Wait a moment for the receive loop to exit
-        usleep(200_000) // 200ms
+        // Wait for the receive loop to actually exit, capped at 200ms so
+        // we don't block UI longer than necessary. The loop signals the
+        // semaphore on its last iteration; if it's already past its
+        // capture call we'll just hit the timeout — which is fine.
+        _ = stoppedSemaphore.wait(timeout: .now() + .milliseconds(200))
 
         // Destroy receiver under lock
         receiverLock.lock()
@@ -120,6 +128,9 @@ final class NDISource: FrameProvider {
                 }
             }
         }
+        // Tell stop() that the loop has fully exited so it can proceed
+        // to destroy the receiver without UI hitch.
+        stoppedSemaphore.signal()
     }
 
     private func ensurePool(width: Int, height: Int) {

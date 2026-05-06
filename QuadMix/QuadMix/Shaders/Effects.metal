@@ -15,6 +15,25 @@ struct EffectParams {
     float padding;
 };
 
+// MARK: - Rotate (discrete 90° steps via UV remap)
+// param1 is the standard 0-1 intensity slider, mapped to 4 discrete steps:
+// 0..0.25 = 0°, 0.25..0.5 = 90°, 0.5..0.75 = 180°, 0.75..1.0 = 270° CW.
+fragment float4 effect_rotate(VertexOut in [[stage_in]],
+                               texture2d<float> tex [[texture(0)]],
+                               constant EffectParams &p [[buffer(0)]]) {
+    constexpr sampler s(filter::linear, address::clamp_to_edge);
+    int step = int(round(p.param1 * 3.0)) & 3;
+    float2 uv = in.texCoord;
+    if (step == 1) {
+        uv = float2(in.texCoord.y, 1.0 - in.texCoord.x);
+    } else if (step == 2) {
+        uv = float2(1.0 - in.texCoord.x, 1.0 - in.texCoord.y);
+    } else if (step == 3) {
+        uv = float2(1.0 - in.texCoord.y, in.texCoord.x);
+    }
+    return tex.sample(s, uv);
+}
+
 // MARK: - Mirror Horizontal (blends between normal and mirrored based on intensity)
 fragment float4 effect_mirror_h(VertexOut in [[stage_in]],
                                  texture2d<float> tex [[texture(0)]],

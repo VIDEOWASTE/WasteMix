@@ -74,7 +74,13 @@ final class MetalContext {
             library = lib
         }
 
-        let vertexFunc = library.makeFunction(name: "vertex_passthrough")!
+        guard let vertexFunc = library.makeFunction(name: "vertex_passthrough") else {
+            // The vertex shader is the foundation of every other pipeline; if
+            // it can't be found something is seriously wrong with the build
+            // (renamed shader, missing .metal in target, library load failure).
+            // Fail loudly with a useful message rather than crash on a `!`.
+            fatalError("MetalContext: required shader 'vertex_passthrough' missing from default library — check that Shaders/Passthrough.metal is in the target's Compile Sources.")
+        }
 
         // Passthrough pipeline
         self.passthroughPipeline = Self.makePipeline(
@@ -138,7 +144,8 @@ final class MetalContext {
                            "effect_mosaic", "effect_strobe", "effect_rgb_split",
                            "effect_posterize", "effect_blur", "effect_solarize",
                            "effect_edges", "effect_datamosh", "effect_scanlines",
-                           "effect_kaleidoscope", "effect_halftone", "effect_feedback"]
+                           "effect_kaleidoscope", "effect_halftone", "effect_feedback",
+                           "effect_rotate"]
         for name in effectNames {
             effectPipelines[name] = Self.makePipeline(
                 device: device, library: library,
@@ -165,7 +172,10 @@ final class MetalContext {
     ) -> MTLRenderPipelineState {
         let desc = MTLRenderPipelineDescriptor()
         desc.vertexFunction = vertexFunction
-        desc.fragmentFunction = library.makeFunction(name: fragmentName)
+        guard let frag = library.makeFunction(name: fragmentName) else {
+            fatalError("MetalContext: shader '\(fragmentName)' missing from default library — check that the relevant .metal file is in the target's Compile Sources.")
+        }
+        desc.fragmentFunction = frag
         desc.colorAttachments[0].pixelFormat = .bgra8Unorm
         do {
             return try device.makeRenderPipelineState(descriptor: desc)
@@ -182,7 +192,10 @@ final class MetalContext {
     ) -> MTLRenderPipelineState {
         let desc = MTLRenderPipelineDescriptor()
         desc.vertexFunction = vertexFunction
-        desc.fragmentFunction = library.makeFunction(name: fragmentName)
+        guard let frag = library.makeFunction(name: fragmentName) else {
+            fatalError("MetalContext: blend shader '\(fragmentName)' missing from default library.")
+        }
+        desc.fragmentFunction = frag
         desc.colorAttachments[0].pixelFormat = .bgra8Unorm
         // Enable alpha blending for wipe transitions
         desc.colorAttachments[0].isBlendingEnabled = true

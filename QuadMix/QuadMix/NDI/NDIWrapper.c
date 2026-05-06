@@ -9,12 +9,21 @@
 // 5. Add libndi.dylib to Link Binary With Libraries
 
 #include "NDIWrapper.h"
+#include <stddef.h>  // NULL — needed by both ENABLE_NDI and stub paths
 
 #ifdef ENABLE_NDI
 
 #include "Processing.NDI.Lib.h"
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
+// Forward-declared from Processing.NDI.Send.h. The project's bundled
+// Processing.NDI.Lib.h is the older standalone variant which doesn't expose
+// the async API; rather than swap headers and risk Mac/Catalyst breakage we
+// just declare what we need.
+extern void NDIlib_send_send_video_async_v2(NDIlib_send_instance_t p_instance,
+                                            const NDIlib_video_frame_v2_t* p_video_data);
 
 bool NDIWrapper_Initialize(void) {
     return NDIlib_initialize();
@@ -26,6 +35,7 @@ void NDIWrapper_Destroy(void) {
 
 NDIFinderRef NDIWrapper_CreateFinder(void) {
     NDIlib_find_create_t find_create;
+    memset(&find_create, 0, sizeof(find_create));
     find_create.show_local_sources = true;
     find_create.p_groups = NULL;
     find_create.p_extra_ips = NULL;
@@ -102,8 +112,16 @@ bool NDIWrapper_CaptureVideo(NDIReceiverRef receiver, NDIVideoFrame* outFrame, i
     outFrame->data = video_frame.p_data;
     outFrame->fourCC = video_frame.FourCC;
 
-    // Store the original SDK frame verbatim so FreeVideoFrame can pass it back untouched
-    memcpy(outFrame->_ndi_frame, &video_frame, sizeof(video_frame) < 128 ? sizeof(video_frame) : 128);
+    // Store the original SDK frame verbatim so FreeVideoFrame can pass it
+    // back untouched. The buffer is 512 bytes, larger than any current
+    // NDIlib_video_frame_v2_t (typically <200B) — bail with an assert if a
+    // future SDK rev outgrows it.
+    if (sizeof(video_frame) > sizeof(outFrame->_ndi_frame)) {
+        // Defensive: SDK struct grew; skip storing and return false so caller
+        // doesn't attempt a corrupted free later.
+        return false;
+    }
+    memcpy(outFrame->_ndi_frame, &video_frame, sizeof(video_frame));
 
     return true;
 }
@@ -115,7 +133,7 @@ void NDIWrapper_FreeVideoFrame(NDIReceiverRef receiver, NDIVideoFrame* frame) {
 
     // Pass back the original SDK frame struct — never reconstruct it
     NDIlib_video_frame_v2_t video_frame;
-    memcpy(&video_frame, frame->_ndi_frame, sizeof(video_frame) < 128 ? sizeof(video_frame) : 128);
+    memcpy(&video_frame, frame->_ndi_frame, sizeof(video_frame));
 
     NDIlib_recv_free_video_v2(ndi_recv, &video_frame);
     frame->data = NULL;
@@ -129,9 +147,13 @@ void NDIWrapper_DestroyReceiver(NDIReceiverRef receiver) {
 
 NDISenderRef NDIWrapper_CreateSender(const char* name) {
     NDIlib_send_create_t send_create;
+    memset(&send_create, 0, sizeof(send_create));
     send_create.p_ndi_name = name;
     send_create.p_groups = NULL;
-    send_create.clock_video = true;
+    // clock_video=false → send is non-blocking; we pace from the engine's
+    // CADisplayLink. Blocking caused queue back-pressure on the Metal
+    // completion thread which produced the dropouts.
+    send_create.clock_video = false;
     send_create.clock_audio = false;
     return (NDISenderRef)NDIlib_send_create(&send_create);
 }
@@ -142,20 +164,41 @@ void NDIWrapper_SendVideo(NDISenderRef sender, const uint8_t* data,
     NDIlib_send_instance_t ndi_send = (NDIlib_send_instance_t)sender;
 
     NDIlib_video_frame_v2_t frame;
+    memset(&frame, 0, sizeof(frame));
     frame.xres = width;
     frame.yres = height;
     frame.FourCC = NDIlib_FourCC_video_type_BGRA;
-    frame.frame_rate_N = 60000;
-    frame.frame_rate_D = 1001;
+    frame.frame_rate_N = 60;
+    frame.frame_rate_D = 1;
     frame.picture_aspect_ratio = (float)width / (float)height;
     frame.frame_format_type = 1; // progressive
-    frame.timecode = 0;
+    frame.timecode = INT64_MAX;  // synthesize
     frame.p_data = (uint8_t*)data;
     frame.line_stride_in_bytes = stride;
-    frame.p_metadata = NULL;
-    frame.timestamp = 0;
 
     NDIlib_send_send_video_v2(ndi_send, &frame);
+}
+
+void NDIWrapper_SendVideoAsync(NDISenderRef sender, const uint8_t* data,
+                               int width, int height, int stride) {
+    if (!sender || !data) return;
+    NDIlib_send_instance_t ndi_send = (NDIlib_send_instance_t)sender;
+
+    NDIlib_video_frame_v2_t frame;
+    memset(&frame, 0, sizeof(frame));
+    frame.xres = width;
+    frame.yres = height;
+    frame.FourCC = NDIlib_FourCC_video_type_BGRA;
+    frame.frame_rate_N = 30;  // matches the OutputRenderer divisor
+    frame.frame_rate_D = 1;
+    frame.picture_aspect_ratio = (float)width / (float)height;
+    frame.frame_format_type = 1;
+    frame.timecode = INT64_MAX;  // synthesize
+    frame.p_data = (uint8_t*)data;
+    frame.line_stride_in_bytes = stride;
+
+    // Async — NDI lib keeps the pointer alive until next async call.
+    NDIlib_send_send_video_async_v2(ndi_send, &frame);
 }
 
 void NDIWrapper_DestroySender(NDISenderRef sender) {
@@ -175,6 +218,7 @@ void NDIWrapper_FreeVideoFrame(NDIReceiverRef r, NDIVideoFrame* f) {}
 void NDIWrapper_DestroyReceiver(NDIReceiverRef r) {}
 NDISenderRef NDIWrapper_CreateSender(const char* n) { return NULL; }
 void NDIWrapper_SendVideo(NDISenderRef s, const uint8_t* d, int w, int h, int st) {}
+void NDIWrapper_SendVideoAsync(NDISenderRef s, const uint8_t* d, int w, int h, int st) {}
 void NDIWrapper_DestroySender(NDISenderRef s) {}
 
 #endif

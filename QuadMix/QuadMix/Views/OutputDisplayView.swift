@@ -84,7 +84,10 @@ struct OutputMetalView: UIViewRepresentable {
 
         init(device: MTLDevice, renderEngine: RenderEngine, screenIndex: Int) {
             self.device = device
-            self.commandQueue = device.makeCommandQueue()
+            // Share the engine's command queue so reads of programTexture /
+            // screen textures are properly serialized with engine writes.
+            // A separate queue produced tearing on the live output.
+            self.commandQueue = MetalContext.shared.commandQueue
             self.pipelineState = MetalContext.shared.passthroughPipeline
             self.renderEngine = renderEngine
             self.screenIndex = screenIndex

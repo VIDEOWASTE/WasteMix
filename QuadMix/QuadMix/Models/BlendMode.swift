@@ -20,7 +20,11 @@ enum ChannelBlendMode: String, CaseIterable, Identifiable, Codable {
     // Vixid specials
     case subtract
     case average
+    // Logic / math
+    case and
+    case or
     case xor
+    case negation
 
     var id: String { rawValue }
 
@@ -41,7 +45,10 @@ enum ChannelBlendMode: String, CaseIterable, Identifiable, Codable {
         case .lighten: return "Lighten"
         case .subtract: return "Subtract"
         case .average: return "Average"
+        case .and: return "AND"
+        case .or: return "OR"
         case .xor: return "XOR"
+        case .negation: return "Negation"
         }
     }
 

@@ -30,7 +30,11 @@ typedef struct {
     int stride;
     uint8_t* data;
     int fourCC; // NDIlib_FourCC_video_type_BGRA etc.
-    uint8_t _ndi_frame[128]; // Stores the original NDIlib_video_frame_v2_t for safe freeing
+    // Stores the original NDIlib_video_frame_v2_t for safe freeing.
+    // 512 bytes is generously sized: the v2 struct fluctuates between 96-160
+    // bytes across SDK versions/architectures; the previous 128-byte buffer
+    // truncated newer revs and corrupted the heap when freed.
+    uint8_t _ndi_frame[512];
 } NDIVideoFrame;
 
 // Initialize NDI runtime. Call once at app startup.
@@ -69,9 +73,15 @@ typedef void* NDISenderRef;
 // Create an NDI sender with the given name (visible on the network)
 NDISenderRef NDIWrapper_CreateSender(const char* name);
 
-// Send a BGRA video frame
+// Send a BGRA video frame (synchronous — copies the data inside the lib)
 void NDIWrapper_SendVideo(NDISenderRef sender, const uint8_t* data,
                           int width, int height, int stride);
+
+// Send a BGRA video frame asynchronously. The NDI lib keeps a reference to
+// `data` until the next async call; the caller must NOT free or rewrite the
+// buffer before then. Use a ring of 3+ buffers to avoid races.
+void NDIWrapper_SendVideoAsync(NDISenderRef sender, const uint8_t* data,
+                               int width, int height, int stride);
 
 // Destroy sender
 void NDIWrapper_DestroySender(NDISenderRef sender);

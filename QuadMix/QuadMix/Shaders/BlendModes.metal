@@ -34,7 +34,10 @@ fragment float4 blend_add(VertexOut in [[stage_in]],
     float4 b = base.sample(s, in.texCoord);
     float4 l = layer.sample(s, in.texCoord);
     float3 blended = min(b.rgb + l.rgb, float3(1.0));
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -47,7 +50,10 @@ fragment float4 blend_multiply(VertexOut in [[stage_in]],
     float4 b = base.sample(s, in.texCoord);
     float4 l = layer.sample(s, in.texCoord);
     float3 blended = b.rgb * l.rgb;
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -60,7 +66,10 @@ fragment float4 blend_screen(VertexOut in [[stage_in]],
     float4 b = base.sample(s, in.texCoord);
     float4 l = layer.sample(s, in.texCoord);
     float3 blended = 1.0 - (1.0 - b.rgb) * (1.0 - l.rgb);
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -76,7 +85,10 @@ fragment float4 blend_overlay(VertexOut in [[stage_in]],
     blended.r = b.r < 0.5 ? 2.0 * b.r * l.r : 1.0 - 2.0 * (1.0 - b.r) * (1.0 - l.r);
     blended.g = b.g < 0.5 ? 2.0 * b.g * l.g : 1.0 - 2.0 * (1.0 - b.g) * (1.0 - l.g);
     blended.b = b.b < 0.5 ? 2.0 * b.b * l.b : 1.0 - 2.0 * (1.0 - b.b) * (1.0 - l.b);
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -89,7 +101,10 @@ fragment float4 blend_difference(VertexOut in [[stage_in]],
     float4 b = base.sample(s, in.texCoord);
     float4 l = layer.sample(s, in.texCoord);
     float3 blended = abs(b.rgb - l.rgb);
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -102,7 +117,10 @@ fragment float4 blend_exclusion(VertexOut in [[stage_in]],
     float4 b = base.sample(s, in.texCoord);
     float4 l = layer.sample(s, in.texCoord);
     float3 blended = b.rgb + l.rgb - 2.0 * b.rgb * l.rgb;
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -118,7 +136,10 @@ fragment float4 blend_hardLight(VertexOut in [[stage_in]],
     blended.r = l.r < 0.5 ? 2.0 * b.r * l.r : 1.0 - 2.0 * (1.0 - b.r) * (1.0 - l.r);
     blended.g = l.g < 0.5 ? 2.0 * b.g * l.g : 1.0 - 2.0 * (1.0 - b.g) * (1.0 - l.g);
     blended.b = l.b < 0.5 ? 2.0 * b.b * l.b : 1.0 - 2.0 * (1.0 - b.b) * (1.0 - l.b);
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -131,7 +152,10 @@ fragment float4 blend_softLight(VertexOut in [[stage_in]],
     float4 b = base.sample(s, in.texCoord);
     float4 l = layer.sample(s, in.texCoord);
     float3 blended = (1.0 - 2.0 * l.rgb) * b.rgb * b.rgb + 2.0 * l.rgb * b.rgb;
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -147,7 +171,10 @@ fragment float4 blend_colorDodge(VertexOut in [[stage_in]],
     blended.r = l.r >= 1.0 ? 1.0 : min(1.0, b.r / (1.0 - l.r));
     blended.g = l.g >= 1.0 ? 1.0 : min(1.0, b.g / (1.0 - l.g));
     blended.b = l.b >= 1.0 ? 1.0 : min(1.0, b.b / (1.0 - l.b));
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -163,7 +190,10 @@ fragment float4 blend_colorBurn(VertexOut in [[stage_in]],
     blended.r = l.r <= 0.0 ? 0.0 : max(0.0, 1.0 - (1.0 - b.r) / l.r);
     blended.g = l.g <= 0.0 ? 0.0 : max(0.0, 1.0 - (1.0 - b.g) / l.g);
     blended.b = l.b <= 0.0 ? 0.0 : max(0.0, 1.0 - (1.0 - b.b) / l.b);
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -176,7 +206,10 @@ fragment float4 blend_darken(VertexOut in [[stage_in]],
     float4 b = base.sample(s, in.texCoord);
     float4 l = layer.sample(s, in.texCoord);
     float3 blended = min(b.rgb, l.rgb);
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -189,7 +222,10 @@ fragment float4 blend_lighten(VertexOut in [[stage_in]],
     float4 b = base.sample(s, in.texCoord);
     float4 l = layer.sample(s, in.texCoord);
     float3 blended = max(b.rgb, l.rgb);
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -202,7 +238,10 @@ fragment float4 blend_subtract(VertexOut in [[stage_in]],
     float4 b = base.sample(s, in.texCoord);
     float4 l = layer.sample(s, in.texCoord);
     float3 blended = max(b.rgb - l.rgb, float3(0.0));
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -215,7 +254,55 @@ fragment float4 blend_average(VertexOut in [[stage_in]],
     float4 b = base.sample(s, in.texCoord);
     float4 l = layer.sample(s, in.texCoord);
     float3 blended = (b.rgb + l.rgb) * 0.5;
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
+    return float4(result, 1.0);
+}
+
+// MARK: - AND (bitwise on 8-bit components, like XOR but ANDed)
+fragment float4 blend_and(VertexOut in [[stage_in]],
+                           texture2d<float> base [[texture(0)]],
+                           texture2d<float> layer [[texture(1)]],
+                           constant BlendUniforms &uniforms [[buffer(0)]]) {
+    constexpr sampler s(filter::linear, address::clamp_to_edge);
+    float4 b = base.sample(s, in.texCoord);
+    float4 l = layer.sample(s, in.texCoord);
+    uint3 bi = uint3(b.rgb * 255.0);
+    uint3 li = uint3(l.rgb * 255.0);
+    uint3 ai = bi & li;
+    float3 blended = float3(ai) / 255.0;
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
+    return float4(result, 1.0);
+}
+
+// MARK: - OR (bitwise on 8-bit components)
+fragment float4 blend_or(VertexOut in [[stage_in]],
+                          texture2d<float> base [[texture(0)]],
+                          texture2d<float> layer [[texture(1)]],
+                          constant BlendUniforms &uniforms [[buffer(0)]]) {
+    constexpr sampler s(filter::linear, address::clamp_to_edge);
+    float4 b = base.sample(s, in.texCoord);
+    float4 l = layer.sample(s, in.texCoord);
+    uint3 bi = uint3(b.rgb * 255.0);
+    uint3 li = uint3(l.rgb * 255.0);
+    uint3 oi = bi | li;
+    float3 blended = float3(oi) / 255.0;
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
+    return float4(result, 1.0);
+}
+
+// MARK: - Negation (mathematical inverse — bright where colors don't overlap)
+fragment float4 blend_negation(VertexOut in [[stage_in]],
+                                texture2d<float> base [[texture(0)]],
+                                texture2d<float> layer [[texture(1)]],
+                                constant BlendUniforms &uniforms [[buffer(0)]]) {
+    constexpr sampler s(filter::linear, address::clamp_to_edge);
+    float4 b = base.sample(s, in.texCoord);
+    float4 l = layer.sample(s, in.texCoord);
+    float3 blended = 1.0 - abs(1.0 - b.rgb - l.rgb);
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }
 
@@ -232,6 +319,9 @@ fragment float4 blend_xor(VertexOut in [[stage_in]],
     uint3 li = uint3(l.rgb * 255.0);
     uint3 xi = bi ^ li;
     float3 blended = float3(xi) / 255.0;
-    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity);
+    // Multiply by layer alpha so per-channel keying (luma/chroma) actually
+    // shows the underlying base where the layer was keyed out — without this,
+    // keys only worked on Normal blend.
+    float3 result = applyOpacity(b.rgb, blended, uniforms.opacity * l.a);
     return float4(result, 1.0);
 }

@@ -9,6 +9,17 @@ final class AudioEngine {
     private var fftSetup: vDSP_DFT_Setup?
     private let fftSize = 1024
 
+    // Pre-allocated work buffers — the audio render thread MUST NOT malloc
+    // each callback (priority inversion + glitches). Reused every callback.
+    // @ObservationIgnored because @Observable's macro doesn't allow `lazy`.
+    @ObservationIgnored private var window: [Float] = []
+    @ObservationIgnored private var windowed: [Float] = []
+    @ObservationIgnored private var realIn: [Float] = []
+    @ObservationIgnored private var imagIn: [Float] = []
+    @ObservationIgnored private var realOut: [Float] = []
+    @ObservationIgnored private var imagOut: [Float] = []
+    @ObservationIgnored private var magnitudes: [Float] = []
+
     /// Raw spectrum magnitude (0-1) for 512 bins
     private(set) var spectrum: [Float] = []
 
@@ -28,6 +39,15 @@ final class AudioEngine {
 
     init() {
         fftSetup = vDSP_DFT_zop_CreateSetup(nil, vDSP_Length(fftSize), .FORWARD)
+        // Pre-allocate FFT work buffers
+        window = [Float](repeating: 0, count: fftSize)
+        vDSP_hann_window(&window, vDSP_Length(fftSize), Int32(vDSP_HANN_NORM))
+        windowed = [Float](repeating: 0, count: fftSize)
+        realIn = [Float](repeating: 0, count: fftSize)
+        imagIn = [Float](repeating: 0, count: fftSize)
+        realOut = [Float](repeating: 0, count: fftSize)
+        imagOut = [Float](repeating: 0, count: fftSize)
+        magnitudes = [Float](repeating: 0, count: fftSize / 2)
     }
 
     deinit {
@@ -43,14 +63,23 @@ final class AudioEngine {
         startEngine()
     }
 
+    private static var didConfigureAudioSession = false
+
     private func startEngine() {
         #if !targetEnvironment(macCatalyst)
-        let session = AVAudioSession.sharedInstance()
-        do {
-            try session.setCategory(.playAndRecord, options: [.defaultToSpeaker, .mixWithOthers])
-            try session.setActive(true)
-        } catch {
-            NSLog("[AudioEngine] Audio session error: %@", error.localizedDescription)
+        // Configure the shared audio session ONCE at first start. Re-running
+        // setCategory after the AVCaptureSession has the camera active fires
+        // an audio session interruption that takes the camera down — so do
+        // it lazily and only once per process.
+        if !Self.didConfigureAudioSession {
+            let session = AVAudioSession.sharedInstance()
+            do {
+                try session.setCategory(.playAndRecord, options: [.defaultToSpeaker, .mixWithOthers])
+                try session.setActive(true)
+                Self.didConfigureAudioSession = true
+            } catch {
+                NSLog("[AudioEngine] Audio session error: %@", error.localizedDescription)
+            }
         }
         #endif
 
@@ -123,26 +152,22 @@ final class AudioEngine {
         vDSP_measqv(channelData, 1, &rms, vDSP_Length(count))
         rms = sqrtf(rms)
 
-        // Apply Hann window
-        var windowed = [Float](repeating: 0, count: fftSize)
-        var window = [Float](repeating: 0, count: fftSize)
-        vDSP_hann_window(&window, vDSP_Length(fftSize), Int32(vDSP_HANN_NORM))
-        // Multiply input by window
-        for j in 0..<count {
-            windowed[j] = channelData[j] * window[j]
+        // Apply Hann window into the pre-allocated `windowed` buffer.
+        // Zero out tail of `windowed` if last buffer was longer than `count`.
+        for j in 0..<count { windowed[j] = channelData[j] * window[j] }
+        if count < fftSize {
+            for j in count..<fftSize { windowed[j] = 0 }
         }
 
-        // FFT
-        var realIn = [Float](repeating: 0, count: fftSize)
-        var imagIn = [Float](repeating: 0, count: fftSize)
-        var realOut = [Float](repeating: 0, count: fftSize)
-        var imagOut = [Float](repeating: 0, count: fftSize)
-        realIn = windowed
+        // FFT — reuse pre-allocated buffers; clear imaginary inputs each call.
+        for j in 0..<fftSize {
+            realIn[j] = windowed[j]
+            imagIn[j] = 0
+        }
 
         vDSP_DFT_Execute(setup, &realIn, &imagIn, &realOut, &imagOut)
 
-        // Magnitude
-        var magnitudes = [Float](repeating: 0, count: halfFFT)
+        // Magnitude into pre-allocated `magnitudes`.
         for i in 0..<halfFFT {
             magnitudes[i] = sqrtf(realOut[i] * realOut[i] + imagOut[i] * imagOut[i])
         }

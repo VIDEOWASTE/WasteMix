@@ -19,7 +19,10 @@ extension ChannelBlendMode {
         case .lighten: return "LITE"
         case .subtract: return "SUB"
         case .average: return "AVG"
+        case .and: return "AND"
+        case .or: return "OR"
         case .xor: return "XOR"
+        case .negation: return "NEG"
         }
     }
 }
@@ -53,7 +56,12 @@ struct BlendModePickerView: View {
             Section("Special") {
                 blendButton(.subtract)
                 blendButton(.average)
+            }
+            Section("Logic / Math") {
+                blendButton(.and)
+                blendButton(.or)
                 blendButton(.xor)
+                blendButton(.negation)
             }
         } label: {
             HStack(spacing: 5) {

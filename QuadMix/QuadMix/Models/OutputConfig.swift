@@ -117,6 +117,41 @@ struct MeshWarp: Codable {
         rows = 1
         generateGrid()
     }
+
+    /// Inverse of subdivide — drops one row and one col, preserving any existing
+    /// node positions that map onto the coarser grid.
+    mutating func unsubdivide() {
+        guard cols > 1 || rows > 1 else { return }
+
+        let oldCols = cols
+        let oldRows = rows
+        let oldNodes = nodes
+
+        cols = max(1, cols - 1)
+        rows = max(1, rows - 1)
+
+        nodes.removeAll()
+        for r in 0...rows {
+            for c in 0...cols {
+                let oldC = Float(c) / Float(cols) * Float(oldCols)
+                let oldR = Float(r) / Float(rows) * Float(oldRows)
+                let ci = Int(round(oldC))
+                let ri = Int(round(oldR))
+                if !oldNodes.isEmpty && ci <= oldCols && ri <= oldRows &&
+                   abs(oldC - Float(ci)) < 0.01 && abs(oldR - Float(ri)) < 0.01 {
+                    let oldIdx = ri * (oldCols + 1) + ci
+                    if oldIdx < oldNodes.count {
+                        nodes.append(oldNodes[oldIdx])
+                        continue
+                    }
+                }
+                nodes.append(WarpNode(
+                    x: Float(c) / Float(cols),
+                    y: Float(r) / Float(rows)
+                ))
+            }
+        }
+    }
 }
 
 struct MaskRect: Identifiable, Codable {
@@ -125,10 +160,50 @@ struct MaskRect: Identifiable, Codable {
     var w: Float = 0.5; var h: Float = 0.5
 }
 
+/// Where a slice pulls its pixels from. Lets you put one slice on the program
+/// mix, another on a single camera channel, etc. — Resolume-ish per-slice
+/// routing without (yet) decoupling slice destinations.
+enum SliceSource: String, CaseIterable, Codable, Identifiable {
+    case program
+    case channel0
+    case channel1
+    case channel2
+    case channel3
+
+    var id: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .program: return "Program"
+        case .channel0: return "CH 1"
+        case .channel1: return "CH 2"
+        case .channel2: return "CH 3"
+        case .channel3: return "CH 4"
+        }
+    }
+    var channelIndex: Int? {
+        switch self {
+        case .program: return nil
+        case .channel0: return 0
+        case .channel1: return 1
+        case .channel2: return 2
+        case .channel3: return 3
+        }
+    }
+}
+
 struct OutputSlice: Identifiable, Codable {
     var id = UUID()
     var name: String = "Slice"
     var enabled: Bool = true
+
+    /// Per-slice input source. Defaults to the full mix; can be set to any
+    /// channel for a multi-source canvas layout.
+    var sourceType: SliceSource = .program
+
+    /// When true, dragging the bottom-right corner in transform mode keeps
+    /// the current width/height ratio so the slice scales uniformly.
+    /// Defaults to true — uniform scaling is the safer default for VJ work.
+    var lockAspectRatio: Bool = true
 
     // Source region (0-1 in program)
     var sourceX: Float = 0; var sourceY: Float = 0
@@ -236,7 +311,21 @@ final class OutputConfig {
     func addSlice(to screenIndex: Int) {
         guard screenIndex < screens.count else { return }
         var slice = OutputSlice()
-        slice.name = "Slice \(screens[screenIndex].slices.count + 1)"
+        let n = screens[screenIndex].slices.count
+        slice.name = "Slice \(n + 1)"
+        // Cascade new slices to a half-size box offset from the previous one
+        // so overlapping defaults don't make every slice indistinguishable
+        // and the newest doesn't always cover the others.
+        let offset = Float(n % 6) * 0.06
+        slice.outputX = 0.1 + offset
+        slice.outputY = 0.1 + offset
+        // Default to source-aspect (square in normalized coords for a 16:9 screen)
+        // so a freshly added slice doesn't stretch the source content.
+        let scr = screens[screenIndex]
+        let srcA: Float = 1920.0 / 1080.0
+        let scrA: Float = Float(scr.width) / Float(max(1, scr.height))
+        slice.outputW = 0.5
+        slice.outputH = max(0.05, 0.5 / (srcA / scrA))
         screens[screenIndex].slices.append(slice)
     }
 

@@ -25,8 +25,12 @@ final class ChannelRenderer {
 
     /// Returns the fully processed texture: source → color correction → effect → keying.
     func currentTexture(commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        // Treat the .freeze effect type as a freeze trigger so the standalone
+        // toggle isn't needed — picking the effect freezes the channel.
+        let frozen = channel.isFrozen || channel.effectType == .freeze
+
         // Pull latest frame (unless frozen)
-        if !channel.isFrozen {
+        if !frozen {
             if let provider = frameProvider, let newTex = provider.latestTexture {
                 lastSourceTexture = newTex
             }
@@ -38,11 +42,11 @@ final class ChannelRenderer {
         }
 
         // If unfrozen, clear the frozen snapshot
-        if !channel.isFrozen {
+        if !frozen {
             frozenTexture = nil
         }
 
-        guard let srcTex = (channel.isFrozen ? frozenTexture : lastSourceTexture) ?? lastSourceTexture else {
+        guard let srcTex = (frozen ? frozenTexture : lastSourceTexture) ?? lastSourceTexture else {
             return nil
         }
 

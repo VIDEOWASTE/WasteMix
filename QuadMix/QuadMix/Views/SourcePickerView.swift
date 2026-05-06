@@ -10,6 +10,7 @@ struct SourcePickerView: View {
 
     @State private var selectedVideoItem: PhotosPickerItem?
     @State private var selectedImageItem: PhotosPickerItem?
+    @State private var cameraStatus: AVAuthorizationStatus = .notDetermined
 
     var body: some View {
         NavigationStack {
@@ -17,11 +18,17 @@ struct SourcePickerView: View {
                 VStack(spacing: 12) {
                     // Camera
                     sourceSection("Camera") {
+                        if cameraStatus == .denied || cameraStatus == .restricted {
+                            cameraDeniedBanner
+                        }
                         sourceRow(icon: "camera", label: "Back Camera", tint: .blue) {
                             selectSource(.camera(position: .back))
                         }
                         sourceRow(icon: "camera.rotate", label: "Front Camera", tint: .blue) {
                             selectSource(.camera(position: .front))
+                        }
+                        if !CameraHub.shared.isMultiCamSupported {
+                            singleCamHint
                         }
                     }
 
@@ -171,8 +178,66 @@ struct SourcePickerView: View {
             .onChange(of: selectedImageItem) { _, newItem in
                 if let item = newItem { loadMedia(from: item, isVideo: false) }
             }
+            .onAppear {
+                cameraStatus = AVCaptureDevice.authorizationStatus(for: .video)
+            }
         }
         .interactiveDismissDisabled(false)
+    }
+
+    private var singleCamHint: some View {
+        // Heads-up for older iPads (iPad 7 and earlier, A11-and-older Pros)
+        // that don't support AVCaptureMultiCamSession. Single camera works,
+        // assigning a second simultaneously won't.
+        HStack(spacing: 10) {
+            Image(systemName: "info.circle")
+                .font(.system(size: 13))
+                .foregroundColor(.gray)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("One camera at a time")
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundColor(.white.opacity(0.85))
+                Text("This iPad doesn't support running both cameras simultaneously. Switching between front/back works as expected.")
+                    .font(.system(size: 10))
+                    .foregroundColor(.gray)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 14).padding(.vertical, 8)
+        .background(Color.white.opacity(0.04))
+    }
+
+    private var cameraDeniedBanner: some View {
+        Button {
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url)
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.yellow)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Camera Access Denied")
+                        .font(.system(size: 13, weight: .heavy))
+                        .foregroundColor(.white)
+                    Text("Tap to open Settings → enable Camera for WasteMix")
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray)
+                }
+                Spacer()
+                Image(systemName: "arrow.up.right.square")
+                    .font(.system(size: 12))
+                    .foregroundColor(.yellow.opacity(0.7))
+            }
+            .padding(.horizontal, 14).padding(.vertical, 10)
+            .background(Color.yellow.opacity(0.10))
+            .overlay(Rectangle().stroke(Color.yellow.opacity(0.3), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Components

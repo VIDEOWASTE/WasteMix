@@ -54,6 +54,21 @@ enum LFOTarget: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+/// What the master-section LFO drives. Crossfader sweeps the A/B groups
+/// auto-magically; masterLevel pulses overall output.
+enum MasterLFOTarget: String, CaseIterable, Identifiable, Codable {
+    case masterLevel
+    case crossfader
+
+    var id: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .masterLevel: return "Master Level"
+        case .crossfader: return "Crossfader"
+        }
+    }
+}
+
 struct LFOSettings {
     var enabled: Bool = false
     var shape: LFOShape = .sine

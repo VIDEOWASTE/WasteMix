@@ -2,7 +2,14 @@ import Metal
 import MetalKit
 import QuartzCore
 
-final class RenderEngine: NSObject, MTKViewDelegate {
+/// Weak proxy so CADisplayLink doesn't retain RenderEngine (CADisplayLink
+/// retains its target — without this we'd leak the engine forever).
+private final class DisplayLinkProxy {
+    weak var engine: RenderEngine?
+    @objc func tick() { engine?.tickRender() }
+}
+
+final class RenderEngine: NSObject {
     let mixerState: MixerState
     let outputConfig = OutputConfig()
     let transitionEngine = TransitionEngine()
@@ -14,15 +21,74 @@ final class RenderEngine: NSObject, MTKViewDelegate {
     private let compositorPipeline = CompositorPipeline()
     private(set) var channelRenderers: [ChannelRenderer] = []
 
+    /// Stable composited output. The render loop writes here every tick.
+    /// Any MTKView that wants to show the program just blits this — no view
+    /// owns the loop, so a backgrounded scene can't freeze output for the
+    /// other windows (Advanced Output, external display, NDI).
+    let programTexture: MTLTexture
+
     private let inflightSemaphore = DispatchSemaphore(value: 2)
     private(set) var channelPreviewTextures: [MTLTexture?] = Array(repeating: nil, count: 4)
 
+    private var displayLink: CADisplayLink?
+    private let displayLinkProxy = DisplayLinkProxy()
     private var lastTimestamp: CFTimeInterval = 0
 
     init(mixerState: MixerState) {
         self.mixerState = mixerState
+
+        let desc = MTLTextureDescriptor.texture2DDescriptor(
+            pixelFormat: .bgra8Unorm,
+            width: Constants.defaultWidth,
+            height: Constants.defaultHeight,
+            mipmapped: false
+        )
+        desc.usage = [.renderTarget, .shaderRead]
+        desc.storageMode = .private
+        guard let tex = ctx.device.makeTexture(descriptor: desc) else {
+            fatalError("Failed to allocate program texture")
+        }
+        self.programTexture = tex
+
         super.init()
         self.channelRenderers = mixerState.channels.map { ChannelRenderer(channel: $0) }
+
+        displayLinkProxy.engine = self
+        let link = CADisplayLink(target: displayLinkProxy, selector: #selector(DisplayLinkProxy.tick))
+        link.preferredFramesPerSecond = 60
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    deinit {
+        displayLink?.invalidate()
+    }
+
+    // MARK: - Lifecycle
+
+    /// Pause GPU work, NDI sends, and camera capture when the app
+    /// backgrounds. iOS will deny camera access in the background anyway,
+    /// and continuing to drive the display link wastes battery + leaves
+    /// the mic/cam status indicators lit. Reviewers will flag that.
+    func pauseForBackground() {
+        displayLink?.isPaused = true
+        outputRenderer.shutdown()
+        // Snapshot user-facing settings so they survive across launches.
+        mixerState.savePersistedSettings()
+        // Stop camera off the main thread — Apple recommends a session queue
+        // and keeping the call on main can produce a 200–500ms hitch.
+        DispatchQueue.global(qos: .userInitiated).async {
+            CameraHub.shared.session.stopRunning()
+        }
+    }
+
+    func resumeForForeground() {
+        displayLink?.isPaused = false
+        // Re-attach any inputs the non-multi-cam path may have detached, then
+        // restart. Done off-main to avoid hitching the foreground transition.
+        DispatchQueue.global(qos: .userInitiated).async {
+            CameraHub.shared.reattachAllConsumers()
+        }
     }
 
     func setSource(_ source: FrameProvider?, for channelIndex: Int) {
@@ -37,13 +103,9 @@ final class RenderEngine: NSObject, MTKViewDelegate {
         NSLog("[RenderEngine] source.start() called")
     }
 
-    // MARK: - MTKViewDelegate
+    // MARK: - Render Tick (driven by CADisplayLink)
 
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        compositorPipeline.resize(width: Int(size.width), height: Int(size.height))
-    }
-
-    func draw(in view: MTKView) {
+    fileprivate func tickRender() {
         let now = CACurrentMediaTime()
         lastTimestamp = now
 
@@ -53,8 +115,7 @@ final class RenderEngine: NSObject, MTKViewDelegate {
         updateLFOs(time: Float(now))
         updateAudioReactivity()
 
-        guard let drawable = view.currentDrawable,
-              let commandBuffer = ctx.commandQueue.makeCommandBuffer() else {
+        guard let commandBuffer = ctx.commandQueue.makeCommandBuffer() else {
             inflightSemaphore.signal()
             return
         }
@@ -68,7 +129,8 @@ final class RenderEngine: NSObject, MTKViewDelegate {
         for (i, renderer) in channelRenderers.enumerated() {
             let channel = mixerState.channels[i]
 
-            if let tex = renderer.currentTexture(commandBuffer: commandBuffer) {
+            let texMaybe = renderer.currentTexture(commandBuffer: commandBuffer)
+            if let tex = texMaybe {
                 channelPreviewTextures[i] = tex
 
                 if channel.faderLevel > 0.001 {
@@ -81,17 +143,12 @@ final class RenderEngine: NSObject, MTKViewDelegate {
 
                     if let transition = transitionEngine.activeTransition(for: channel),
                        transition.type.isWipe {
-                        // Auto-transition driving the wipe
                         wipeProgress = channel.transitionProgress
                         wipeDirection = transition.type.wipeDirection
                     } else if channel.transitionConfig.type.isWipe {
-                        // Manual fader = manual T-bar wipe
-                        // Fader at 0 = wipe progress 0 (channel hidden)
-                        // Fader at 1 = wipe progress 1 (channel fully revealed)
                         wipeProgress = channel.faderLevel
                         wipeDirection = channel.transitionConfig.type.wipeDirection
                     } else {
-                        // Mix/cut/dip: fader is pure opacity, no spatial wipe
                         wipeProgress = nil
                         wipeDirection = nil
                     }
@@ -99,7 +156,7 @@ final class RenderEngine: NSObject, MTKViewDelegate {
                     activeChannels.append(ChannelCompositeInfo(
                         texture: tex,
                         blendMode: channel.blendMode,
-                        opacity: channel.faderLevel,
+                        opacity: channel.faderLevel * mixerState.masterLevel,
                         wipeProgress: wipeProgress,
                         wipeDirection: wipeDirection,
                         pipSettings: channel.pipSettings
@@ -111,18 +168,17 @@ final class RenderEngine: NSObject, MTKViewDelegate {
         compositorPipeline.composite(
             channels: activeChannels,
             globalColorCorrection: mixerState.globalColorCorrection,
-            into: drawable.texture,
+            into: programTexture,
             commandBuffer: commandBuffer
         )
 
-        // Advanced Output: process through output renderer (NDI out, mapping, etc.)
         outputRenderer.render(
-            programTexture: drawable.texture,
+            programTexture: programTexture,
+            channelTextures: channelPreviewTextures,
             config: outputConfig,
             commandBuffer: commandBuffer
         )
 
-        commandBuffer.present(drawable)
         commandBuffer.commit()
 
         // Flush texture cache to release stale CVMetalTexture mappings
@@ -132,6 +188,23 @@ final class RenderEngine: NSObject, MTKViewDelegate {
     // MARK: - LFO
 
     private func updateLFOs(time: Float) {
+        // Master LFO — routed to the master target.
+        if mixerState.masterLFO.isActive {
+            let v = mixerState.masterLFO.compute(time: time, bpm: mixerState.bpm)
+            mixerState.masterLFO.currentValue = v
+            switch mixerState.masterLFOTarget {
+            case .masterLevel:
+                mixerState.masterLevel = v
+            case .crossfader:
+                mixerState.masterLevel = 1.0  // not dimming when sweeping crossfader
+                mixerState.crossfaderPos = v
+                mixerState.applyCrossfader()
+            }
+        } else {
+            // No master LFO running — make sure we're not stuck at a stale dim level.
+            mixerState.masterLevel = 1.0
+        }
+
         for channel in mixerState.channels {
             guard channel.lfo.isActive else { continue }
 

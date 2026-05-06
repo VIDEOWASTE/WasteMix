@@ -11,17 +11,18 @@ struct AdvancedOutputView: View {
     var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
-            let panelScale = min(1.3, max(0.65, w / 550.0))
+            // Smaller scaling than before — Advanced Output was getting too
+            // chunky on iPad Pro. Was 0.65–1.3, now 0.6–1.0.
+            let panelScale = min(1.0, max(0.6, w / 700.0))
             // sc passed to functions but we use scaleEffect for uniform scaling
             let sc: CGFloat = 1.0
 
             VStack(spacing: 0) {
-                // Top bar — always full size
+                // Top bar — TFM/MESH/zoom pushed toward center via leading
+                // padding so the controls clear the iPad multitasking
+                // close/minimize bubble in the top-left of the window.
                 HStack(spacing: 6) {
-                    Rectangle().fill(R).frame(width: 2, height: 10)
-                    Text("ADV OUT")
-                        .font(.system(size: 9, weight: .black, design: .monospaced))
-                        .foregroundColor(.white)
+                    Spacer().frame(width: 80)
 
                     canvasModeBarInline(sc)
 
@@ -34,22 +35,29 @@ struct AdvancedOutputView: View {
 
                 // Main content
                 HStack(spacing: 0) {
-                    // Canvas — fills remaining space
+                    // Canvas — fills remaining space, grey background.
+                    // Outer padding gives a safe buffer between the canvas
+                    // content (slice borders + mesh nodes) and the iPad
+                    // window's edge so drags can't accidentally trigger
+                    // Stage Manager resize.
                     outputCanvas(sc, size: geo.size)
                         .frame(maxWidth: .infinity)
+                        .padding(.leading, 18)
+                        .padding(.bottom, 18)
+                        .background(Color(red: 0.06, green: 0.06, blue: 0.07))
 
                     Rectangle().fill(R.opacity(0.1)).frame(width: 1)
 
-                    // Right panel — liquid scaled like main mixer
-                    let panelW = min(max(w * 0.35, 180), 280)
+                    // Right panel — narrower default so the canvas gets more room.
+                    let panelW = min(max(w * 0.3, 160), 240)
                     ScrollView(.vertical, showsIndicators: true) {
                         VStack(alignment: .leading, spacing: 12) {
                             screenTabs(sc)
                             destinationPicker(sc)
                             sliceList(sc)
                             if let slice = selectedSliceBinding {
-                                transformSection(slice, sc)
                                 inputSection(slice, sc)
+                                transformSection(slice, sc)
                                 blendSection(slice, sc)
                             }
                             Spacer(minLength: 8)
@@ -63,6 +71,8 @@ struct AdvancedOutputView: View {
                     .clipped()
                 }
             }
+            // Right panel + outer chrome stay dark; canvas area is grey
+            // (applied above on the canvas itself).
             .background(Color(red: 0.03, green: 0.03, blue: 0.04))
         }
     }
@@ -98,7 +108,7 @@ struct AdvancedOutputView: View {
                 Toggle("", isOn: Binding(
                     get: { outputConfig.screens[idx].enabled },
                     set: { outputConfig.screens[idx].enabled = $0 }
-                )).labelsHidden().tint(R).scaleEffect(0.7)
+                )).labelsHidden().tint(R).scaleEffect(1.0)
             }
         }
         .padding(.horizontal, scaled(8, sc)).padding(.vertical, scaled(4, sc))
@@ -109,10 +119,11 @@ struct AdvancedOutputView: View {
 
     @ViewBuilder
     private func canvasModeBarInline(_ sc: CGFloat) -> some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 6) {
             modeButton("arrow.up.left.and.arrow.down.right", "TFM", .transform, sc)
             modeButton("circle.grid.3x3", "MESH", .mesh, sc)
 
+            // Mode-specific options (mesh node controls or transform aspect lock)
             if outputConfig.canvasEditMode == .mesh {
                 Button {
                     let si = outputConfig.selectedScreenIndex
@@ -120,12 +131,31 @@ struct AdvancedOutputView: View {
                     if si < outputConfig.screens.count, sli < outputConfig.screens[si].slices.count {
                         outputConfig.screens[si].slices[sli].meshWarpEnabled = true
                         outputConfig.screens[si].slices[sli].meshWarp.subdivide()
+                        Haptics.tap()
                     }
                 } label: {
-                    Text("+").font(.system(size: 9, weight: .black, design: .monospaced))
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .black))
                         .foregroundColor(R)
-                        .padding(.horizontal, 4).padding(.vertical, 2)
-                        .background(R.opacity(0.15))
+                        .frame(width: 32, height: 26)
+                        .background(R.opacity(0.18))
+                        .overlay(Rectangle().stroke(R.opacity(0.4), lineWidth: 0.5))
+                }.buttonStyle(TactileButtonStyle())
+
+                Button {
+                    let si = outputConfig.selectedScreenIndex
+                    let sli = outputConfig.selectedSliceIndex
+                    if si < outputConfig.screens.count, sli < outputConfig.screens[si].slices.count {
+                        outputConfig.screens[si].slices[sli].meshWarp.unsubdivide()
+                        Haptics.tap()
+                    }
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.system(size: 13, weight: .black))
+                        .foregroundColor(R.opacity(0.85))
+                        .frame(width: 32, height: 26)
+                        .background(R.opacity(0.10))
+                        .overlay(Rectangle().stroke(R.opacity(0.3), lineWidth: 0.5))
                 }.buttonStyle(TactileButtonStyle())
 
                 Button {
@@ -133,14 +163,109 @@ struct AdvancedOutputView: View {
                     let sli = outputConfig.selectedSliceIndex
                     if si < outputConfig.screens.count, sli < outputConfig.screens[si].slices.count {
                         outputConfig.screens[si].slices[sli].meshWarp.reset()
+                        Haptics.thud()
                     }
                 } label: {
-                    Text("RST").font(.system(size: 6, weight: .black, design: .monospaced))
+                    Text("RST").font(.system(size: 9, weight: .black, design: .monospaced))
+                        .lineLimit(1).minimumScaleFactor(0.7)
                         .foregroundColor(.gray)
-                        .padding(.horizontal, 4).padding(.vertical, 2)
+                        .padding(.horizontal, 6).padding(.vertical, 6)
                         .background(Color.white.opacity(0.05))
                 }.buttonStyle(TactileButtonStyle())
+            } else if outputConfig.canvasEditMode == .transform {
+                // FREE / LOCK aspect ratio — mirrors the mesh sub-options style.
+                let si = outputConfig.selectedScreenIndex
+                let sli = outputConfig.selectedSliceIndex
+                let locked: Bool = (si < outputConfig.screens.count
+                                    && sli < outputConfig.screens[si].slices.count)
+                                    ? outputConfig.screens[si].slices[sli].lockAspectRatio
+                                    : false
+                // LOCK first since it's the default; FREE second.
+                Button {
+                    if si < outputConfig.screens.count, sli < outputConfig.screens[si].slices.count {
+                        outputConfig.screens[si].slices[sli].lockAspectRatio = true
+                        // Snap the slice's H to source aspect so it matches
+                        // the video edges immediately (instead of waiting for
+                        // the next corner drag to correct it).
+                        let scr = outputConfig.screens[si]
+                        let srcA: Float = 1920.0 / 1080.0
+                        let scrA: Float = Float(scr.width) / Float(max(1, scr.height))
+                        let target: Float = srcA / scrA
+                        let curW = outputConfig.screens[si].slices[sli].outputW
+                        outputConfig.screens[si].slices[sli].outputH = max(0.05, curW / target)
+                        Haptics.tap()
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "lock.fill").font(.system(size: 9, weight: .bold))
+                        Text("LOCK").font(.system(size: 9, weight: .black, design: .monospaced))
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                    }
+                    .foregroundColor(locked ? .white : .gray)
+                    .padding(.horizontal, 6).padding(.vertical, 6)
+                    .background(locked ? R.opacity(0.3) : Color.white.opacity(0.05))
+                    .overlay(Rectangle().stroke(locked ? R : Color.white.opacity(0.1), lineWidth: 0.5))
+                }.buttonStyle(TactileButtonStyle())
+                Button {
+                    if si < outputConfig.screens.count, sli < outputConfig.screens[si].slices.count {
+                        outputConfig.screens[si].slices[sli].lockAspectRatio = false
+                        Haptics.tap()
+                    }
+                } label: {
+                    Text("FREE").font(.system(size: 9, weight: .black, design: .monospaced))
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                        .foregroundColor(locked ? .gray : .white)
+                        .padding(.horizontal, 6).padding(.vertical, 6)
+                        .background(locked ? Color.white.opacity(0.05) : R.opacity(0.3))
+                        .overlay(Rectangle().stroke(locked ? Color.white.opacity(0.1) : R, lineWidth: 0.5))
+                }.buttonStyle(TactileButtonStyle())
             }
+
+            Spacer(minLength: 4)
+
+            // Zoom controls grouped into a single fixed-width HStack so the
+            // outer flex spacers can't compress or clip individual buttons
+            // (which had been swallowing taps on the left-side button when
+            // the row was tight).
+            HStack(spacing: 4) {
+                Image(systemName: "minus.magnifyingglass")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 48, height: 36)
+                    .background(Color.white.opacity(0.10))
+                    .overlay(Rectangle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        canvasZoom = max(0.5, canvasZoom - 0.2)
+                        pinchBaseZoom = canvasZoom
+                        Haptics.tap()
+                    }
+
+                Text("\(Int(canvasZoom * 100))%")
+                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                    .foregroundColor(.gray)
+                    .frame(width: 50, height: 36)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        canvasZoom = 1.0
+                        pinchBaseZoom = 1.0
+                        Haptics.tap()
+                    }
+
+                Image(systemName: "plus.magnifyingglass")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 48, height: 36)
+                    .background(Color.white.opacity(0.10))
+                    .overlay(Rectangle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        canvasZoom = min(4.0, canvasZoom + 0.2)
+                        pinchBaseZoom = canvasZoom
+                        Haptics.tap()
+                    }
+            }
+            .fixedSize()
         }
     }
 
@@ -212,7 +337,6 @@ struct AdvancedOutputView: View {
         let isActive = outputConfig.canvasEditMode == mode
         return Button {
             outputConfig.canvasEditMode = mode
-            // Auto-enable mesh warp on the selected slice when entering mesh mode
             if mode == .mesh {
                 let si = outputConfig.selectedScreenIndex
                 let sli = outputConfig.selectedSliceIndex
@@ -223,29 +347,45 @@ struct AdvancedOutputView: View {
                     }
                 }
             }
+            Haptics.tap()
         } label: {
-            HStack(spacing: scaled(3, sc)) {
+            HStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.system(size: sf(10, sc), weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                 Text(label)
-                    .font(.system(size: sf(7, sc), weight: .black, design: .monospaced))
+                    .font(.system(size: 11, weight: .black, design: .monospaced))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .foregroundColor(isActive ? .white : .gray)
-            .padding(.horizontal, scaled(8, sc))
-            .padding(.vertical, scaled(4, sc))
-            .background(isActive ? R.opacity(0.4) : Color.white.opacity(0.03))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(isActive ? R.opacity(0.4) : Color.white.opacity(0.04))
             .overlay(
-                Rectangle().stroke(isActive ? R : Color.clear, lineWidth: 1)
+                Rectangle().stroke(isActive ? R : Color.white.opacity(0.1), lineWidth: 1)
             )
         }
         .buttonStyle(TactileButtonStyle())
+        .layoutPriority(1)
     }
 
     // MARK: - Canvas
 
     @State private var dragStartX: Float = 0
     @State private var dragStartY: Float = 0
+    @State private var isDraggingSlice = false
+    // Corner-drag start state — captured once per drag so aspect-lock and
+    // anchor-to-opposite-corner math doesn't re-evaluate against half-updated
+    // values mid-drag.
+    @State private var isDraggingCorner = false
+    @State private var cornerStartX: Float = 0
+    @State private var cornerStartY: Float = 0
+    @State private var cornerStartW: Float = 0
+    @State private var cornerStartH: Float = 0
     @State private var showNDIPopover = false
+    @State private var canvasZoom: CGFloat = 1.0
+    @State private var pinchBaseZoom: CGFloat = 1.0
 
     private func outputCanvas(_ sc: CGFloat, size: CGSize) -> some View {
         GeometryReader { geo in
@@ -253,47 +393,58 @@ struct AdvancedOutputView: View {
             if idx < outputConfig.screens.count {
                 let screen = outputConfig.screens[idx]
                 let aspect = CGFloat(screen.width) / CGFloat(screen.height)
-                let canvasW = min(geo.size.width - 20, (geo.size.height - 20) * aspect)
+                // Canvas occupies ~80% of available area at 100% zoom so there's
+                // breathing room for slices that extend past the screen edges.
+                let baseFit = min(geo.size.width - 20, (geo.size.height - 20) * aspect) * 0.8
+                let canvasW = baseFit
                 let canvasH = canvasW / aspect
                 let ox = (geo.size.width - canvasW) / 2
                 let oy = (geo.size.height - canvasH) / 2
                 let handleSize = scaled(12, sc)
 
                 ZStack {
-                    Color(red: 0.06, green: 0.06, blue: 0.07)
+                    // Dark "canvas" rect at the actual screen aspect (16:9 by
+                    // default), positioned to match canvasW × canvasH. The
+                    // surrounding area shows the wrapper's lighter grey so
+                    // the canvas reads clearly at any zoom.
+                    Rectangle()
+                        .fill(Color(red: 0.02, green: 0.02, blue: 0.03))
+                        .frame(width: canvasW, height: canvasH)
+                        .position(x: ox + canvasW/2, y: oy + canvasH/2)
 
-                    // Program preview (non-interactive)
+                    // Program preview (non-interactive). Sized and positioned
+                    // to match canvasW/canvasH exactly so the slice borders
+                    // (which are positioned in canvasW × canvasH space) align
+                    // 1:1 with the rendered image — without this the preview
+                    // filled geo.size with aspect-fit and the slice rect
+                    // moved at a different scale, looking like a perspective.
                     if let tex = renderEngine.outputRenderer.getScreenTexture(for: screen) {
                         PreviewView(device: MetalContext.shared.device, textureProvider: { tex })
-                            .aspectRatio(aspect, contentMode: .fit)
+                            .frame(width: canvasW, height: canvasH)
+                            .position(x: ox + canvasW/2, y: oy + canvasH/2)
                             .allowsHitTesting(false)
                     }
 
-                    // Layer 1: Slice borders (non-selected) — tap to select (disabled in mesh mode)
-                    ForEach(Array(screen.slices.enumerated()), id: \.element.id) { si, slice in
+                    // Layer 1: Slice borders (non-selected) — tap to select (disabled in mesh mode).
+                    // Sorted largest-first so SMALLER slices render on top of
+                    // bigger ones — that way a tap inside the small slice
+                    // hits it (instead of always picking the topmost-by-creation).
+                    let sortedSlices = Array(screen.slices.enumerated())
+                        .sorted { ($0.element.outputW * $0.element.outputH) > ($1.element.outputW * $1.element.outputH) }
+                    ForEach(sortedSlices, id: \.element.id) { si, slice in
                         if outputConfig.selectedSliceIndex != si {
                             let x = ox + CGFloat(slice.outputX) * canvasW
                             let y = oy + CGFloat(slice.outputY) * canvasH
                             let w = CGFloat(slice.outputW) * canvasW
                             let h = CGFloat(slice.outputH) * canvasH
+                            // Visual border only — selection is handled by the
+                            // single canvas-wide SpatialTapGesture below so
+                            // overlapping slices don't fight for taps.
                             Rectangle()
                                 .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
                                 .frame(width: w, height: h)
                                 .position(x: x + w/2, y: y + h/2)
-                                .contentShape(Rectangle())
-                                .allowsHitTesting(outputConfig.canvasEditMode != .mesh)
-                                .onTapGesture {
-                                    outputConfig.selectedSliceIndex = si
-                                    outputConfig.selectedNodeIndex = nil
-                                    if outputConfig.canvasEditMode == .mesh {
-                                        if idx < outputConfig.screens.count, si < outputConfig.screens[idx].slices.count {
-                                            outputConfig.screens[idx].slices[si].meshWarpEnabled = true
-                                            if outputConfig.screens[idx].slices[si].meshWarp.nodes.isEmpty {
-                                                outputConfig.screens[idx].slices[si].meshWarp.generateGrid()
-                                            }
-                                        }
-                                    }
-                                }
+                                .allowsHitTesting(false)
 
                             Text(slice.name)
                                 .font(.system(size: sf(8, sc), weight: .heavy, design: .monospaced))
@@ -345,6 +496,10 @@ struct AdvancedOutputView: View {
                         }
 
                         // === TRANSFORM MODE ===
+                        // Bounds relaxed to [-1, 2] so slices can extend beyond
+                        // the canvas — Resolume-style overscan placement. The
+                        // 0.05 minimum width/height stays so handles don't
+                        // collapse to a point.
                         if editMode == .transform {
                             Rectangle()
                                 .fill(Color.white.opacity(0.001))
@@ -352,67 +507,159 @@ struct AdvancedOutputView: View {
                                 .position(x: x + w/2, y: y + h/2)
                                 .gesture(DragGesture()
                                     .onChanged { drag in
-                                        if abs(drag.translation.width) < 2 && abs(drag.translation.height) < 2 {
+                                        // Capture anchor on the FIRST onChanged of
+                                        // each drag — the previous "translation < 2"
+                                        // heuristic missed cases where a new drag
+                                        // started already moving fast, leaving
+                                        // dragStartX stale and making the slice
+                                        // jump across the canvas.
+                                        if !isDraggingSlice {
                                             dragStartX = outputConfig.screens[idx].slices[selIdx].outputX
                                             dragStartY = outputConfig.screens[idx].slices[selIdx].outputY
+                                            isDraggingSlice = true
                                         }
-                                        let curW = outputConfig.screens[idx].slices[selIdx].outputW
-                                        let curH = outputConfig.screens[idx].slices[selIdx].outputH
                                         let dx = Float(drag.translation.width / canvasW)
                                         let dy = Float(drag.translation.height / canvasH)
-                                        outputConfig.screens[idx].slices[selIdx].outputX = max(0, min(1 - curW, dragStartX + dx))
-                                        outputConfig.screens[idx].slices[selIdx].outputY = max(0, min(1 - curH, dragStartY + dy))
+                                        outputConfig.screens[idx].slices[selIdx].outputX = max(-1, min(2, dragStartX + dx))
+                                        outputConfig.screens[idx].slices[selIdx].outputY = max(-1, min(2, dragStartY + dy))
                                     }
                                     .onEnded { _ in
-                                        dragStartX = outputConfig.screens[idx].slices[selIdx].outputX
-                                        dragStartY = outputConfig.screens[idx].slices[selIdx].outputY
+                                        isDraggingSlice = false
                                     })
 
+                            // Handles sit centered exactly on the slice corners
+                            // so they "lock" to the image edges.
+                            let lock = outputConfig.screens[idx].slices[selIdx].lockAspectRatio
+                            // Target normalized W/H ratio so the slice's PIXEL
+                            // aspect matches the SOURCE pixel aspect (no stretch).
+                            // sourceAspect / screenAspect — for the common
+                            // 16:9 source on a 16:9 screen this is 1.0 (square
+                            // in normalized coords = 16:9 in pixels).
+                            let sourceAspect: Float = 1920.0 / 1080.0
+                            let screenAspect: Float = Float(screen.width) / Float(max(1, screen.height))
+                            let lockAspect: Float = sourceAspect / screenAspect
+
+                            // TL — anchor to BR (right, bottom stay fixed)
                             cornerHandle(x: x, y: y, size: handleSize, filled: true)
                                 .highPriorityGesture(DragGesture()
                                     .onChanged { drag in
-                                        let newX = Float((drag.location.x - ox) / canvasW)
-                                        let newY = Float((drag.location.y - oy) / canvasH)
-                                        let right = outputConfig.screens[idx].slices[selIdx].outputX + outputConfig.screens[idx].slices[selIdx].outputW
-                                        let bottom = outputConfig.screens[idx].slices[selIdx].outputY + outputConfig.screens[idx].slices[selIdx].outputH
-                                        let cx = max(0, min(right - 0.05, newX))
-                                        let cy = max(0, min(bottom - 0.05, newY))
-                                        outputConfig.screens[idx].slices[selIdx].outputX = cx
-                                        outputConfig.screens[idx].slices[selIdx].outputY = cy
-                                        outputConfig.screens[idx].slices[selIdx].outputW = right - cx
-                                        outputConfig.screens[idx].slices[selIdx].outputH = bottom - cy
-                                    })
+                                        if !isDraggingCorner {
+                                            cornerStartX = outputConfig.screens[idx].slices[selIdx].outputX
+                                            cornerStartY = outputConfig.screens[idx].slices[selIdx].outputY
+                                            cornerStartW = outputConfig.screens[idx].slices[selIdx].outputW
+                                            cornerStartH = outputConfig.screens[idx].slices[selIdx].outputH
+                                            isDraggingCorner = true
+                                        }
+                                        let right = cornerStartX + cornerStartW
+                                        let bottom = cornerStartY + cornerStartH
+                                        var newX = max(-1, min(right - 0.05, Float((drag.location.x - ox) / canvasW)))
+                                        var newY = max(-1, min(bottom - 0.05, Float((drag.location.y - oy) / canvasH)))
+                                        if lock {
+                                            let aspect = lockAspect
+                                            let dxN = right - newX
+                                            let dyN = bottom - newY
+                                            // Pick whichever delta moved more from start
+                                            if abs(dxN - cornerStartW) > abs(dyN - cornerStartH) {
+                                                let h = dxN / aspect
+                                                newY = bottom - h
+                                            } else {
+                                                let w = dyN * aspect
+                                                newX = right - w
+                                            }
+                                        }
+                                        outputConfig.screens[idx].slices[selIdx].outputX = newX
+                                        outputConfig.screens[idx].slices[selIdx].outputY = newY
+                                        outputConfig.screens[idx].slices[selIdx].outputW = right - newX
+                                        outputConfig.screens[idx].slices[selIdx].outputH = bottom - newY
+                                    }
+                                    .onEnded { _ in isDraggingCorner = false })
 
+                            // BR — anchor to TL (left, top stay fixed). Most common scale corner.
                             cornerHandle(x: x + w, y: y + h, size: handleSize, filled: true)
                                 .highPriorityGesture(DragGesture()
                                     .onChanged { drag in
-                                        let curX = outputConfig.screens[idx].slices[selIdx].outputX
-                                        let curY = outputConfig.screens[idx].slices[selIdx].outputY
-                                        outputConfig.screens[idx].slices[selIdx].outputW = max(0.05, min(1 - curX, Float((drag.location.x - x) / canvasW)))
-                                        outputConfig.screens[idx].slices[selIdx].outputH = max(0.05, min(1 - curY, Float((drag.location.y - y) / canvasH)))
-                                    })
+                                        if !isDraggingCorner {
+                                            cornerStartX = outputConfig.screens[idx].slices[selIdx].outputX
+                                            cornerStartY = outputConfig.screens[idx].slices[selIdx].outputY
+                                            cornerStartW = outputConfig.screens[idx].slices[selIdx].outputW
+                                            cornerStartH = outputConfig.screens[idx].slices[selIdx].outputH
+                                            isDraggingCorner = true
+                                        }
+                                        var newW = max(0.05, min(2 - cornerStartX, Float((drag.location.x - x) / canvasW)))
+                                        var newH = max(0.05, min(2 - cornerStartY, Float((drag.location.y - y) / canvasH)))
+                                        if lock {
+                                            let aspect = lockAspect
+                                            // Pick whichever axis moved more from start
+                                            if abs(newW - cornerStartW) > abs(newH - cornerStartH) {
+                                                newH = max(0.05, newW / aspect)
+                                            } else {
+                                                newW = max(0.05, newH * aspect)
+                                            }
+                                        }
+                                        outputConfig.screens[idx].slices[selIdx].outputW = newW
+                                        outputConfig.screens[idx].slices[selIdx].outputH = newH
+                                    }
+                                    .onEnded { _ in isDraggingCorner = false })
 
+                            // TR — anchor to BL
                             cornerHandle(x: x + w, y: y, size: handleSize, filled: false)
                                 .highPriorityGesture(DragGesture()
                                     .onChanged { drag in
-                                        let curX = outputConfig.screens[idx].slices[selIdx].outputX
-                                        let bottom = outputConfig.screens[idx].slices[selIdx].outputY + outputConfig.screens[idx].slices[selIdx].outputH
-                                        let cy = max(0, min(bottom - 0.05, Float((drag.location.y - oy) / canvasH)))
-                                        outputConfig.screens[idx].slices[selIdx].outputW = max(0.05, min(1 - curX, Float((drag.location.x - x) / canvasW)))
-                                        outputConfig.screens[idx].slices[selIdx].outputY = cy
-                                        outputConfig.screens[idx].slices[selIdx].outputH = bottom - cy
-                                    })
+                                        if !isDraggingCorner {
+                                            cornerStartX = outputConfig.screens[idx].slices[selIdx].outputX
+                                            cornerStartY = outputConfig.screens[idx].slices[selIdx].outputY
+                                            cornerStartW = outputConfig.screens[idx].slices[selIdx].outputW
+                                            cornerStartH = outputConfig.screens[idx].slices[selIdx].outputH
+                                            isDraggingCorner = true
+                                        }
+                                        let bottom = cornerStartY + cornerStartH
+                                        var newW = max(0.05, min(2 - cornerStartX, Float((drag.location.x - x) / canvasW)))
+                                        var newY = max(-1, min(bottom - 0.05, Float((drag.location.y - oy) / canvasH)))
+                                        var newH = bottom - newY
+                                        if lock {
+                                            let aspect = lockAspect
+                                            if abs(newW - cornerStartW) > abs(newH - cornerStartH) {
+                                                newH = max(0.05, newW / aspect)
+                                                newY = bottom - newH
+                                            } else {
+                                                newW = max(0.05, newH * aspect)
+                                            }
+                                        }
+                                        outputConfig.screens[idx].slices[selIdx].outputW = newW
+                                        outputConfig.screens[idx].slices[selIdx].outputY = newY
+                                        outputConfig.screens[idx].slices[selIdx].outputH = newH
+                                    }
+                                    .onEnded { _ in isDraggingCorner = false })
 
+                            // BL — anchor to TR
                             cornerHandle(x: x, y: y + h, size: handleSize, filled: false)
                                 .highPriorityGesture(DragGesture()
                                     .onChanged { drag in
-                                        let right = outputConfig.screens[idx].slices[selIdx].outputX + outputConfig.screens[idx].slices[selIdx].outputW
-                                        let curY = outputConfig.screens[idx].slices[selIdx].outputY
-                                        let cx = max(0, min(right - 0.05, Float((drag.location.x - ox) / canvasW)))
-                                        outputConfig.screens[idx].slices[selIdx].outputX = cx
-                                        outputConfig.screens[idx].slices[selIdx].outputW = right - cx
-                                        outputConfig.screens[idx].slices[selIdx].outputH = max(0.05, min(1 - curY, Float((drag.location.y - y) / canvasH)))
-                                    })
+                                        if !isDraggingCorner {
+                                            cornerStartX = outputConfig.screens[idx].slices[selIdx].outputX
+                                            cornerStartY = outputConfig.screens[idx].slices[selIdx].outputY
+                                            cornerStartW = outputConfig.screens[idx].slices[selIdx].outputW
+                                            cornerStartH = outputConfig.screens[idx].slices[selIdx].outputH
+                                            isDraggingCorner = true
+                                        }
+                                        let right = cornerStartX + cornerStartW
+                                        var newX = max(-1, min(right - 0.05, Float((drag.location.x - ox) / canvasW)))
+                                        var newW = right - newX
+                                        var newH = max(0.05, min(2 - cornerStartY, Float((drag.location.y - y) / canvasH)))
+                                        if lock {
+                                            let aspect = lockAspect
+                                            if abs(newW - cornerStartW) > abs(newH - cornerStartH) {
+                                                newH = max(0.05, newW / aspect)
+                                            } else {
+                                                newW = max(0.05, newH * aspect)
+                                                newX = right - newW
+                                            }
+                                        }
+                                        outputConfig.screens[idx].slices[selIdx].outputX = newX
+                                        outputConfig.screens[idx].slices[selIdx].outputW = newW
+                                        outputConfig.screens[idx].slices[selIdx].outputH = newH
+                                    }
+                                    .onEnded { _ in isDraggingCorner = false })
                         }
 
                         // === MESH MODE: draggable nodes at grid intersections ===
@@ -421,9 +668,54 @@ struct AdvancedOutputView: View {
                         }
                     }
                 }
+                // Canvas-wide tap → select smallest slice containing the tap.
+                // simultaneousGesture so it fires alongside the selected
+                // slice's drag gesture (drag won't trigger on a no-movement
+                // tap, but its presence used to swallow the touch).
+                .simultaneousGesture(
+                    SpatialTapGesture(coordinateSpace: .local)
+                        .onEnded { value in
+                            // Don't change selection while editing mesh nodes
+                            guard outputConfig.canvasEditMode == .transform else { return }
+                            let normX = Float((value.location.x - ox) / canvasW)
+                            let normY = Float((value.location.y - oy) / canvasH)
+                            guard idx < outputConfig.screens.count else { return }
+                            let slices = outputConfig.screens[idx].slices
+                            var bestIdx: Int? = nil
+                            var bestArea: Float = .greatestFiniteMagnitude
+                            for (i, s) in slices.enumerated() {
+                                if normX >= s.outputX && normX <= s.outputX + s.outputW &&
+                                   normY >= s.outputY && normY <= s.outputY + s.outputH {
+                                    let a = s.outputW * s.outputH
+                                    if a < bestArea {
+                                        bestArea = a
+                                        bestIdx = i
+                                    }
+                                }
+                            }
+                            if let i = bestIdx {
+                                outputConfig.selectedSliceIndex = i
+                                outputConfig.selectedNodeIndex = nil
+                            }
+                        }
+                )
+                // Canvas zoom — pinch to scale the whole edit area. Drag
+                // gestures inside still operate in unscaled coords (SwiftUI
+                // scaleEffect leaves gesture coord space alone), so slice
+                // moves at the right speed even at 4× zoom.
+                .scaleEffect(canvasZoom, anchor: .center)
+                .gesture(MagnifyGesture()
+                    .onChanged { value in
+                        canvasZoom = max(0.5, min(4.0, pinchBaseZoom * value.magnification))
+                    }
+                    .onEnded { _ in
+                        pinchBaseZoom = canvasZoom
+                    }
+                )
             }
         }
         .padding(scaled(6, sc))
+        .clipped()
     }
 
     // MARK: - Mesh Node Overlay (safe bounds-checked)
@@ -442,7 +734,14 @@ struct AdvancedOutputView: View {
                 let sliceH = CGFloat(slice.outputH) * canvasH
                 let count = slice.meshWarp.nodes.count
 
-                ForEach(0..<count, id: \.self) { ni in
+                // Hit zones are 44pt squares (Apple HIG min) regardless of the
+                // visible dot — much easier to grab on iPad without making the
+                // dots themselves obscure the canvas.
+                let hitSize: CGFloat = 44
+                // Iterate by stable WarpNode IDs (UUIDs) instead of by index
+                // so SwiftUI doesn't recycle gesture state when subdivide
+                // adds rows/cols and indices shift.
+                ForEach(Array(slice.meshWarp.nodes.enumerated()), id: \.element.id) { ni, _ in
                     // Re-read live on every body evaluation
                     let liveSI = outputConfig.selectedScreenIndex
                     let liveSLI = outputConfig.selectedSliceIndex
@@ -450,24 +749,29 @@ struct AdvancedOutputView: View {
                        liveSLI < outputConfig.screens[liveSI].slices.count,
                        ni < outputConfig.screens[liveSI].slices[liveSLI].meshWarp.nodes.count {
                         let n = outputConfig.screens[liveSI].slices[liveSLI].meshWarp.nodes[ni]
-                        Circle()
-                            .fill(outputConfig.selectedNodeIndex == ni ? R : Color.white)
-                            .frame(width: handleSize, height: handleSize)
-                            .position(x: sliceX + CGFloat(n.x) * sliceW,
-                                      y: sliceY + CGFloat(n.y) * sliceH)
-                            .gesture(DragGesture(minimumDistance: 1)
-                                .onChanged { drag in
-                                    let s = outputConfig.selectedScreenIndex
-                                    let sl = outputConfig.selectedSliceIndex
-                                    guard s < outputConfig.screens.count,
-                                          sl < outputConfig.screens[s].slices.count,
-                                          ni < outputConfig.screens[s].slices[sl].meshWarp.nodes.count else { return }
-                                    outputConfig.selectedNodeIndex = ni
-                                    let newX = Float((drag.location.x - sliceX) / sliceW)
-                                    let newY = Float((drag.location.y - sliceY) / sliceH)
-                                    outputConfig.screens[s].slices[sl].meshWarp.nodes[ni].x = max(0, min(1, newX))
-                                    outputConfig.screens[s].slices[sl].meshWarp.nodes[ni].y = max(0, min(1, newY))
-                                })
+                        ZStack {
+                            // Visible dot kept small so the canvas stays readable
+                            Circle()
+                                .fill(outputConfig.selectedNodeIndex == ni ? R : Color.white)
+                                .frame(width: handleSize, height: handleSize)
+                        }
+                        .frame(width: hitSize, height: hitSize)
+                        .contentShape(Rectangle())
+                        .position(x: sliceX + CGFloat(n.x) * sliceW,
+                                  y: sliceY + CGFloat(n.y) * sliceH)
+                        .gesture(DragGesture(minimumDistance: 1)
+                            .onChanged { drag in
+                                let s = outputConfig.selectedScreenIndex
+                                let sl = outputConfig.selectedSliceIndex
+                                guard s < outputConfig.screens.count,
+                                      sl < outputConfig.screens[s].slices.count,
+                                      ni < outputConfig.screens[s].slices[sl].meshWarp.nodes.count else { return }
+                                outputConfig.selectedNodeIndex = ni
+                                let newX = Float((drag.location.x - sliceX) / sliceW)
+                                let newY = Float((drag.location.y - sliceY) / sliceH)
+                                outputConfig.screens[s].slices[sl].meshWarp.nodes[ni].x = max(0, min(1, newX))
+                                outputConfig.screens[s].slices[sl].meshWarp.nodes[ni].y = max(0, min(1, newY))
+                            })
                     }
                 }
             }
@@ -477,13 +781,19 @@ struct AdvancedOutputView: View {
     // MARK: - Canvas Helpers
 
     private func cornerHandle(x: CGFloat, y: CGFloat, size: CGFloat, filled: Bool) -> some View {
-        Group {
+        // Hit zone padded out to 44pt; the dot stays at `size` for visual
+        // clarity. Without this the corner pins were hard to grab on iPad.
+        let hitSize: CGFloat = 44
+        return ZStack {
             if filled {
-                Circle().fill(R).frame(width: size, height: size).position(x: x, y: y)
+                Circle().fill(R).frame(width: size, height: size)
             } else {
-                Circle().stroke(R, lineWidth: 2).frame(width: size, height: size).position(x: x, y: y)
+                Circle().stroke(R, lineWidth: 2).frame(width: size, height: size)
             }
         }
+        .frame(width: hitSize, height: hitSize)
+        .contentShape(Rectangle())
+        .position(x: x, y: y)
     }
 
     private func meshGridLines(slice: OutputSlice, x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat, color: Color) -> some View {
@@ -544,8 +854,16 @@ struct AdvancedOutputView: View {
             let idx = outputConfig.selectedScreenIndex
             if idx < outputConfig.screens.count {
                 HStack(spacing: scaled(4, sc)) {
-                    numFieldInt("W", Binding(get: { outputConfig.screens[idx].width }, set: { outputConfig.screens[idx].width = $0 }), sc)
-                    numFieldInt("H", Binding(get: { outputConfig.screens[idx].height }, set: { outputConfig.screens[idx].height = $0 }), sc)
+                    // Clamp screen dimensions to a sane range so a typo of 0
+                    // or 100000 can't reach the GPU texture allocator.
+                    numFieldInt("W", Binding(
+                        get: { outputConfig.screens[idx].width },
+                        set: { outputConfig.screens[idx].width = max(64, min(4096, $0)) }
+                    ), sc)
+                    numFieldInt("H", Binding(
+                        get: { outputConfig.screens[idx].height },
+                        set: { outputConfig.screens[idx].height = max(64, min(4096, $0)) }
+                    ), sc)
                 }
             }
         }
@@ -570,6 +888,8 @@ struct AdvancedOutputView: View {
                         VStack(spacing: scaled(1, sc)) {
                             Image(systemName: dest.icon).font(.system(size: sf(9, sc)))
                             Text(dest.displayName).font(.system(size: sf(6, sc), weight: .heavy, design: .monospaced))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
                         }
                         .foregroundColor(sel ? .white : .gray)
                         .frame(maxWidth: .infinity)
@@ -699,6 +1019,13 @@ struct AdvancedOutputView: View {
                                 .font(.system(size: sf(8, sc), weight: .black, design: .monospaced))
                                 .foregroundColor(isSel ? .white : .gray)
                             HStack(spacing: scaled(4, sc)) {
+                                // Source name surfaced inline so the input is
+                                // visible at a glance per slice.
+                                Text(slice.sourceType.displayName.uppercased())
+                                    .font(.system(size: sf(6, sc), weight: .black, design: .monospaced))
+                                    .foregroundColor(R)
+                                    .padding(.horizontal, scaled(3, sc)).padding(.vertical, 1)
+                                    .background(R.opacity(0.18))
                                 if hasMesh {
                                     Text("MESH \(slice.meshWarp.cols)x\(slice.meshWarp.rows)")
                                         .font(.system(size: sf(5, sc), weight: .heavy, design: .monospaced))
@@ -711,6 +1038,24 @@ struct AdvancedOutputView: View {
                         }
 
                         Spacer()
+
+                        // Quick source picker — tap to cycle
+                        // PROGRAM → CH 1 → CH 2 → CH 3 → CH 4 → PROGRAM…
+                        Menu {
+                            ForEach(SliceSource.allCases) { src in
+                                Button {
+                                    outputConfig.screens[idx].slices[si].sourceType = src
+                                    Haptics.tap()
+                                } label: {
+                                    Label(src.displayName, systemImage: slice.sourceType == src ? "checkmark" : "")
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "arrow.triangle.swap")
+                                .font(.system(size: sf(8, sc), weight: .bold))
+                                .foregroundColor(R.opacity(0.8))
+                                .padding(scaled(3, sc))
+                        }
 
                         // Enabled indicator
                         Circle()
@@ -769,13 +1114,15 @@ struct AdvancedOutputView: View {
         VStack(alignment: .leading, spacing: scaled(4, sc)) {
             sectionHeader("TRANSFORM", sc)
 
+            // X/Y allowed to go past the canvas edges so slices can extend
+            // out of bounds (Resolume-style overscan).
             HStack(spacing: scaled(6, sc)) {
-                numField("X", slice.outputX, sc, range: 0...1, step: 0.01)
-                numField("Y", slice.outputY, sc, range: 0...1, step: 0.01)
+                numField("X", slice.outputX, sc, range: -1...2, step: 0.01)
+                numField("Y", slice.outputY, sc, range: -1...2, step: 0.01)
             }
             HStack(spacing: scaled(6, sc)) {
-                numField("W", slice.outputW, sc, range: 0.01...1, step: 0.01)
-                numField("H", slice.outputH, sc, range: 0.01...1, step: 0.01)
+                numField("W", slice.outputW, sc, range: 0.01...3, step: 0.01)
+                numField("H", slice.outputH, sc, range: 0.01...3, step: 0.01)
             }
             HStack(spacing: scaled(6, sc)) {
                 numField("ROT", slice.rotation, sc, range: -360...360, step: 1, fmt: "%.0f°")
@@ -790,13 +1137,30 @@ struct AdvancedOutputView: View {
     private func inputSection(_ slice: Binding<OutputSlice>, _ sc: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: scaled(4, sc)) {
             sectionHeader("INPUT", sc)
-            HStack(spacing: scaled(6, sc)) {
-                numField("X", slice.sourceX, sc, range: 0...1, step: 0.01)
-                numField("Y", slice.sourceY, sc, range: 0...1, step: 0.01)
-            }
-            HStack(spacing: scaled(6, sc)) {
-                numField("W", slice.sourceW, sc, range: 0.01...1, step: 0.01)
-                numField("H", slice.sourceH, sc, range: 0.01...1, step: 0.01)
+
+            // Source picker — Program (the mix) or any single channel.
+            VStack(alignment: .leading, spacing: 3) {
+                Text("SOURCE")
+                    .font(.system(size: sf(7, sc), weight: .heavy, design: .monospaced))
+                    .foregroundColor(.gray)
+                let cols = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
+                LazyVGrid(columns: cols, spacing: 3) {
+                    ForEach(SliceSource.allCases) { src in
+                        Button {
+                            slice.wrappedValue.sourceType = src
+                        } label: {
+                            Text(src.displayName)
+                                .font(.system(size: sf(8, sc), weight: .black, design: .monospaced))
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                                .foregroundColor(slice.wrappedValue.sourceType == src ? .white : .gray)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, scaled(4, sc))
+                                .background(slice.wrappedValue.sourceType == src ? R.opacity(0.35) : Color.white.opacity(0.05))
+                                .overlay(Rectangle().stroke(slice.wrappedValue.sourceType == src ? R : Color.white.opacity(0.08), lineWidth: 0.5))
+                        }
+                        .buttonStyle(TactileButtonStyle())
+                    }
+                }
             }
         }
     }
@@ -1049,7 +1413,7 @@ struct AdvancedOutputView: View {
                 Toggle("", isOn: Binding(
                     get: { outputConfig.globalNDIOutput },
                     set: { outputConfig.globalNDIOutput = $0 }
-                )).labelsHidden().tint(.green).scaleEffect(0.7)
+                )).labelsHidden().tint(.green).scaleEffect(1.0)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("PROGRAM")
@@ -1082,7 +1446,7 @@ struct AdvancedOutputView: View {
                             outputConfig.screens[i].ndiOutputEnabled = $0
                             if $0 { outputConfig.screens[i].destination = .ndi }
                         }
-                    )).labelsHidden().tint(.green).scaleEffect(0.7)
+                    )).labelsHidden().tint(.green).scaleEffect(1.0)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(screen.name)

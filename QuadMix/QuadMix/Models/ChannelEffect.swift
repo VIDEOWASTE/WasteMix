@@ -3,6 +3,7 @@ import Foundation
 enum EffectType: String, CaseIterable, Identifiable, Codable {
     case none
     case freeze
+    case rotate
     case mirror
     case mirrorV
     case invert
@@ -25,6 +26,7 @@ enum EffectType: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .none: return "None"
         case .freeze: return "Freeze"
+        case .rotate: return "Rotate"
         case .mirror: return "Mirror H"
         case .mirrorV: return "Mirror V"
         case .invert: return "Invert"
@@ -47,6 +49,7 @@ enum EffectType: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .none: return "xmark"
         case .freeze: return "pause.circle"
+        case .rotate: return "rotate.right.fill"
         case .mirror: return "arrow.left.and.right"
         case .mirrorV: return "arrow.up.and.down"
         case .invert: return "circle.lefthalf.filled"
@@ -68,6 +71,7 @@ enum EffectType: String, CaseIterable, Identifiable, Codable {
     var metalFunctionName: String? {
         switch self {
         case .none, .freeze: return nil
+        case .rotate: return "effect_rotate"
         case .mirror: return "effect_mirror_h"
         case .mirrorV: return "effect_mirror_v"
         case .invert: return "effect_invert"
@@ -91,6 +95,7 @@ enum EffectType: String, CaseIterable, Identifiable, Codable {
     var param1Label: String {
         switch self {
         case .none, .freeze: return "Intensity"
+        case .rotate: return "Angle"
         case .mirror, .mirrorV: return "Mirror Amount"
         case .invert: return "Invert Amount"
         case .mosaic: return "Block Size"

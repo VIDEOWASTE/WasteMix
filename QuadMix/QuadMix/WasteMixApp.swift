@@ -5,6 +5,10 @@ import UIKit
 class WasteMixAppDelegate: NSObject, UIApplicationDelegate {
     /// Track whether the app has finished launching — secondary windows are only allowed after this
     static var appDidFinishLaunching = false
+    /// Set by `MixerView`'s onAppear so we can identify the mixer scene
+    /// reliably (vs. naively trusting "first scene to connect", which got
+    /// confused by state-restoration scenes).
+    static weak var mixerSceneSession: UISceneSession?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         UserDefaults.standard.set(false, forKey: "NSQuitAlwaysKeepsWindows")
@@ -13,6 +17,11 @@ class WasteMixAppDelegate: NSObject, UIApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             Self.appDidFinishLaunching = true
         }
+
+        // When the mixer scene disconnects, take the auxiliary scenes with it.
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(sceneDidDisconnect(_:)),
+            name: UIScene.didDisconnectNotification, object: nil)
 
         // Set main mixer window to a compact size
         #if targetEnvironment(macCatalyst)
@@ -49,47 +58,92 @@ class WasteMixAppDelegate: NSObject, UIApplicationDelegate {
 
         return config
     }
+
+    @objc private func sceneDidDisconnect(_ note: Notification) {
+        guard let scene = note.object as? UIScene else { return }
+        // Only cascade-destroy when the *known* mixer session disconnects.
+        guard let mixer = Self.mixerSceneSession, scene.session === mixer else { return }
+        Self.mixerSceneSession = nil
+        DispatchQueue.main.async {
+            let app = UIApplication.shared
+            for session in app.openSessions where session !== scene.session {
+                app.requestSceneSessionDestruction(session, options: nil)
+            }
+        }
+    }
+}
+
+/// UIViewRepresentable that captures its host window's UISceneSession on
+/// appear so the AppDelegate knows which session belongs to the mixer.
+struct MixerSceneTracker: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let v = UIView(frame: .zero)
+        v.isHidden = true
+        DispatchQueue.main.async { register(from: v) }
+        return v
+    }
+    func updateUIView(_ uiView: UIView, context: Context) {
+        register(from: uiView)
+    }
+    private func register(from view: UIView) {
+        if let session = view.window?.windowScene?.session {
+            WasteMixAppDelegate.mixerSceneSession = session
+        }
+    }
 }
 
 @main
 struct WasteMixApp: App {
     @UIApplicationDelegateAdaptor(WasteMixAppDelegate.self) var appDelegate
-    @State private var mixerState = MixerState()
-    @State private var inputManager = InputManager()
-    @State private var renderEngine: RenderEngine?
+    @State private var mixerState: MixerState
+    @State private var inputManager: InputManager
+    @State private var renderEngine: RenderEngine
+    @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        // Build the engine eagerly at app init so any scene (including ones
+        // restored before MixerView appears) can use it. Previously the
+        // engine was created lazily inside MixerView's `onAppear`, so a
+        // restored Advanced Output scene without the mixer would show
+        // black indefinitely.
+        let mixer = MixerState()
+        let inputs = InputManager()
+        let engine = RenderEngine(mixerState: mixer)
+        _mixerState = State(initialValue: mixer)
+        _inputManager = State(initialValue: inputs)
+        _renderEngine = State(initialValue: engine)
+    }
 
     var body: some Scene {
         // Main mixer window
         WindowGroup("WasteMix", id: "mixer") {
-            Group {
-                if let engine = renderEngine {
-                    MixerView(
-                        mixerState: mixerState,
-                        renderEngine: engine,
-                        inputManager: inputManager
-                    )
-                } else {
-                    Color.black.onAppear {
-                        renderEngine = RenderEngine(mixerState: mixerState)
-                    }
-                }
-            }
+            MixerView(
+                mixerState: mixerState,
+                renderEngine: renderEngine,
+                inputManager: inputManager
+            )
+            // Tracks this scene's session so the AppDelegate can cascade-close
+            // auxiliary windows when this one closes.
+            .background(MixerSceneTracker())
             .preferredColorScheme(.dark)
             .tint(Color(red: 1.0, green: 0.15, blue: 0.15))
+            .onChange(of: scenePhase) { _, newPhase in
+                switch newPhase {
+                case .active: renderEngine.resumeForForeground()
+                case .inactive, .background: renderEngine.pauseForBackground()
+                @unknown default: break
+                }
+            }
         }
 
         // Advanced Output — only opens via button
         WindowGroup("Advanced Output", id: "advancedOutput") {
-            Group {
-                if let engine = renderEngine {
-                    AdvancedOutputView(
-                        outputConfig: engine.outputConfig,
-                        renderEngine: engine
-                    )
-                } else {
-                    Color.black
-                }
-            }
+            AdvancedOutputView(
+                outputConfig: renderEngine.outputConfig,
+                renderEngine: renderEngine
+            )
+            .onAppear { renderEngine.outputConfig.isAdvancedOutputOpen = true }
+            .onDisappear { renderEngine.outputConfig.isAdvancedOutputOpen = false }
             .preferredColorScheme(.dark)
             .tint(Color(red: 1.0, green: 0.15, blue: 0.15))
             .onAppear {
@@ -113,17 +167,12 @@ struct WasteMixApp: App {
 
         // Live Output — only opens via button
         WindowGroup("Output", id: "liveOutput") {
-            Group {
-                if let engine = renderEngine {
-                    OutputDisplayView(
-                        renderEngine: engine,
-                        screenIndex: engine.outputConfig.selectedScreenIndex
-                    )
-                } else {
-                    Color.black
-                }
-            }
+            OutputDisplayView(
+                renderEngine: renderEngine,
+                screenIndex: renderEngine.outputConfig.selectedScreenIndex
+            )
             .preferredColorScheme(.dark)
         }
     }
 }
+

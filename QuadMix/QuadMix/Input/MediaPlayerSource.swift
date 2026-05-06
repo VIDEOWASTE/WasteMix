@@ -7,6 +7,8 @@ final class MediaPlayerSource: FrameProvider {
     private let videoOutput: AVPlayerItemVideoOutput
     private var looper: AVPlayerLooper?
     private var queuePlayer: AVQueuePlayer?
+    private var loopObserver: NSObjectProtocol?
+    private var currentItemObserver: NSKeyValueObservation?
     private(set) var isActive = false
 
     init(url: URL) {
@@ -29,17 +31,22 @@ final class MediaPlayerSource: FrameProvider {
 
         qp.currentItem?.add(videoOutput)
 
-        // Also add output to template items via notification
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemNewAccessLogEntry,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self = self else { return }
-            if let currentItem = self.queuePlayer?.currentItem,
-               !currentItem.outputs.contains(where: { $0 === self.videoOutput }) {
-                currentItem.add(self.videoOutput)
-            }
+        // Re-attach the video output whenever the looper rotates currentItem.
+        // KVO is more reliable than the access-log notification we used to
+        // observe (which doesn't fire for local file playback) and the token
+        // is cleaned up in deinit so we don't leak the entire pipeline.
+        currentItemObserver = qp.observe(\.currentItem, options: [.new]) { [weak self] _, change in
+            guard let self = self,
+                  let item = change.newValue ?? nil,
+                  !item.outputs.contains(where: { $0 === self.videoOutput }) else { return }
+            item.add(self.videoOutput)
+        }
+    }
+
+    deinit {
+        currentItemObserver?.invalidate()
+        if let token = loopObserver {
+            NotificationCenter.default.removeObserver(token)
         }
     }
 

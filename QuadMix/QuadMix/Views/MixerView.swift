@@ -5,13 +5,12 @@ struct MixerView: View {
     let renderEngine: RenderEngine
     let inputManager: InputManager
 
-    @State private var crossfaderPos: Float = 0.5
-    @State private var crossfaderA: Set<Int> = [0]
-    @State private var crossfaderB: Set<Int> = [1]
+    // Crossfader state lives on MixerState now so the master LFO can drive it.
     // bpm is on mixerState.bpm
     @State private var presetManager = PresetManager()
     @State private var showGlobalColor = false
     @State private var showPresets = false
+    @State private var showAbout = false
 
     // Unified panel system — replaces all sheets
     enum PanelType: Equatable {
@@ -22,6 +21,7 @@ struct MixerView: View {
         case globalColor
         case presets
         case advancedOutput
+        case masterLFO
     }
     @State private var activePanel: PanelType = .none
     @State private var sourcePickerChannel: Int? = nil
@@ -38,7 +38,8 @@ struct MixerView: View {
     var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
-            let scaleFactor = min(1.5, max(0.55, w / 500.0))
+            // Bigger scale ceiling for iPad touch targets — was 1.5, was hitting that cap on every iPad.
+            let scaleFactor = min(2.2, max(0.55, w / 500.0))
 
             VStack(spacing: 0) {
                 topBar
@@ -96,8 +97,8 @@ struct MixerView: View {
     // MARK: - Panel Overlay (replaces all sheets)
 
     private func panelOverlay(scale: CGFloat) -> some View {
-        // Font scale: gentle scaling, 1.0x at 700pt, 1.4x at 1400pt, 0.9x at 500pt
-        let fs = min(1.5, max(0.9, scale * 0.85 + 0.15))
+        // Bigger ceiling for iPad — controls inside panels were too small to tap reliably.
+        let fs = min(2.0, max(0.9, scale * 0.85 + 0.15))
 
         return VStack(spacing: 0) {
             HStack {
@@ -148,6 +149,9 @@ struct MixerView: View {
         case .presets:
             Text("PRESETS")
                 .font(.system(size: fs, weight: .black, design: .monospaced)).foregroundColor(.white)
+        case .masterLFO:
+            Text("MASTER LFO")
+                .font(.system(size: fs, weight: .black, design: .monospaced)).foregroundColor(.white)
         case .advancedOutput:
             EmptyView()
         case .none:
@@ -170,6 +174,8 @@ struct MixerView: View {
                 correction: Binding(get: { mixerState.globalColorCorrection }, set: { mixerState.globalColorCorrection = $0 }))
         case .presets:
             PresetListView(mixerState: mixerState, presetManager: presetManager)
+        case .masterLFO:
+            MasterLFOView(mixerState: mixerState).padding()
         case .advancedOutput:
             EmptyView()
         case .none:
@@ -192,10 +198,14 @@ struct MixerView: View {
 
     private var topBar: some View {
         ZStack {
-            Text("WASTEMIX")
-                .font(.system(size: 11, weight: .black, design: .monospaced))
-                .foregroundColor(R.opacity(0.7))
-                .tracking(3)
+            // Tap WASTEMIX to open the About / NDI attribution sheet.
+            Button { showAbout = true; Haptics.tap() } label: {
+                Text("WASTEMIX")
+                    .font(.system(size: 11, weight: .black, design: .monospaced))
+                    .foregroundColor(R.opacity(0.7))
+                    .tracking(3)
+            }
+            .buttonStyle(.plain)
             HStack {
                 Spacer()
                 Circle().fill(R.opacity(0.5)).frame(width: 5, height: 5)
@@ -208,6 +218,7 @@ struct MixerView: View {
         .padding(.top, 6)
         .padding(.bottom, 3)
         .background(Color(red: 0.04, green: 0.04, blue: 0.05))
+        .sheet(isPresented: $showAbout) { AboutView() }
     }
 
     // MARK: - Monitors
@@ -353,7 +364,16 @@ struct MixerView: View {
                 HStack(spacing: 2) {
                     Menu {
                         ForEach(EffectType.allCases) { fx in
-                            Button { ch.effectType = fx; Haptics.tap() } label: {
+                            Button {
+                                ch.effectType = fx
+                                // Reset to the effect's natural starting strength
+                                // so it visibly engages instead of sitting at 0.5
+                                // (which often produces a no-op or muddy mix —
+                                // notably Invert at 0.5 is fully grey).
+                                ch.effectIntensity = fx.defaultIntensity
+                                ch.effectParam2 = fx.defaultParam2
+                                Haptics.tap()
+                            } label: {
                                 Label(fx.displayName, systemImage: fx == ch.effectType ? "checkmark" : fx.icon)
                             }
                         }
@@ -424,9 +444,9 @@ struct MixerView: View {
                     HStack(spacing: 2) {
                         Text("A").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(R.opacity(0.5)).frame(width: 12)
                         ForEach(0..<4) { i in
-                            chSelectBtn(i, selected: crossfaderA.contains(i)) {
-                                if crossfaderA.contains(i) { crossfaderA.remove(i) }
-                                else { crossfaderA.insert(i) }
+                            chSelectBtn(i, selected: mixerState.crossfaderA.contains(i)) {
+                                if mixerState.crossfaderA.contains(i) { mixerState.crossfaderA.remove(i) }
+                                else { mixerState.crossfaderA.insert(i) }
                             }
                         }
                     }
@@ -439,12 +459,12 @@ struct MixerView: View {
                             Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1, height: 14).offset(x: geo.size.width / 2)
                             Rectangle().fill(R).frame(width: 32, height: 22)
                                 .shadow(color: R.opacity(0.3), radius: 2)
-                                .offset(x: CGFloat(crossfaderPos) * (geo.size.width - 32))
+                                .offset(x: CGFloat(mixerState.crossfaderPos) * (geo.size.width - 32))
                         }
                         .contentShape(Rectangle())
                         .gesture(DragGesture(minimumDistance: 0).onChanged { v in
-                            crossfaderPos = max(0, min(1, Float(v.location.x / geo.size.width)))
-                            applyCrossfader()
+                            mixerState.crossfaderPos = max(0, min(1, Float(v.location.x / geo.size.width)))
+                            mixerState.applyCrossfader()
                         })
                     }.frame(height: 24)
 
@@ -452,11 +472,51 @@ struct MixerView: View {
                     HStack(spacing: 2) {
                         Text("B").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(R.opacity(0.5)).frame(width: 12)
                         ForEach(0..<4) { i in
-                            chSelectBtn(i, selected: crossfaderB.contains(i)) {
-                                if crossfaderB.contains(i) { crossfaderB.remove(i) }
-                                else { crossfaderB.insert(i) }
+                            chSelectBtn(i, selected: mixerState.crossfaderB.contains(i)) {
+                                if mixerState.crossfaderB.contains(i) { mixerState.crossfaderB.remove(i) }
+                                else { mixerState.crossfaderB.insert(i) }
                             }
                         }
+                    }
+
+                    Rectangle().fill(R.opacity(0.06)).frame(height: 0.5).padding(.vertical, 2)
+
+                    // Master LFO — sits between crossfader and tempo so the
+                    // automation lives next to the controls it modulates.
+                    // Same shape as the per-channel "transition + GO" cell:
+                    // click-through label opens the panel, separate toggle
+                    // turns the LFO on/off without opening it.
+                    mstLabel("AUTOMATION")
+                    let mlOn = mixerState.masterLFO.isActive
+                    HStack(spacing: 2) {
+                        Button { activePanel = .masterLFO; Haptics.tap() } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "waveform.path").font(.system(size: 11))
+                                Text("MASTER LFO").font(.system(size: 9, weight: .black, design: .monospaced)).tracking(0.5)
+                                Spacer()
+                                if mlOn {
+                                    Text("\(Int(mixerState.masterLFO.currentValue * 100))%")
+                                        .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                                }
+                            }
+                            .foregroundColor(mlOn ? R : .gray)
+                            .padding(.horizontal, 8).padding(.vertical, 8)
+                            .background(Rectangle().fill(mlOn ? R.opacity(0.25) : Color.white.opacity(0.03))
+                                .overlay(Rectangle().stroke(mlOn ? R.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 0.5)))
+                            .contentShape(Rectangle())
+                        }.buttonStyle(TactileButtonStyle())
+
+                        Button {
+                            mixerState.masterLFO.enabled.toggle()
+                            Haptics.thud()
+                        } label: {
+                            Text(mlOn ? "ON" : "OFF")
+                                .font(.system(size: 9, weight: .black, design: .monospaced))
+                                .foregroundColor(mlOn ? .black : R)
+                                .padding(.horizontal, 8).padding(.vertical, 8)
+                                .background(mlOn ? R : R.opacity(0.15))
+                                .overlay(Rectangle().stroke(R.opacity(0.4), lineWidth: 0.5))
+                        }.buttonStyle(TactileButtonStyle())
                     }
 
                     Rectangle().fill(R.opacity(0.06)).frame(height: 0.5).padding(.vertical, 2)
@@ -520,7 +580,7 @@ struct MixerView: View {
                     mstCellView(label: "PRESET") {
                         HStack(spacing: 3) {
                             bigMstBtn("SAVE", icon: "square.and.arrow.down", fg: R.opacity(0.7), bg: Color(red: 1.0, green: 0.15, blue: 0.15).opacity(0.05)) {
-                                let p = presetManager.capture(from: mixerState, name: "P\(presetManager.presets.count+1)", crossfaderPos: crossfaderPos, bpm: mixerState.bpm)
+                                let p = presetManager.capture(from: mixerState, name: "P\(presetManager.presets.count+1)", crossfaderPos: mixerState.crossfaderPos, bpm: mixerState.bpm)
                                 presetManager.save(preset: p); Haptics.success()
                             }
                             Button { activePanel = .presets; Haptics.tap() } label: {
@@ -536,20 +596,41 @@ struct MixerView: View {
 
                     Rectangle().fill(R.opacity(0.04)).frame(height: 0.5)
 
-                    // Advanced Output — opens separate window
+                    // Top spacer pushes the Advanced Output button down so
+                    // it visually lines up with the TAP TEMPO control at the
+                    // bottom of the left column.
+                    Spacer().frame(height: 20)
+
+                    // Advanced Output — opens separate window.
+                    // Dimmed when closed; brightens when active.
                     mstCellView(label: "OUTPUT") {
+                        let active = renderEngine.outputConfig.isAdvancedOutputOpen
                         Button {
                             openAdvancedOutput()
                             Haptics.tap()
                         } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "rectangle.on.rectangle").font(.system(size: 10))
-                                Text("ADV OUTPUT").font(.system(size: 7, weight: .black, design: .monospaced)).tracking(0.5)
+                            HStack(spacing: 6) {
+                                Image(systemName: "rectangle.on.rectangle.angled")
+                                    .font(.system(size: 14, weight: .bold))
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text("ADVANCED OUTPUT")
+                                        .font(.system(size: 10, weight: .black, design: .monospaced))
+                                        .tracking(1)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.7)
+                                    Text("MAPPING")
+                                        .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                                        .tracking(2)
+                                        .opacity(0.7)
+                                }
+                                Spacer()
+                                Image(systemName: "arrow.up.forward.app.fill")
+                                    .font(.system(size: 12))
                             }
-                            .foregroundColor(activePanel == .advancedOutput ? .white : R)
-                            .frame(maxWidth: .infinity).padding(.vertical, 8)
-                            .background(activePanel == .advancedOutput ? R.opacity(0.4) : R.opacity(0.1))
-                            .overlay(Rectangle().stroke(R.opacity(0.3), lineWidth: 1))
+                            .foregroundColor(active ? .white : R.opacity(0.7))
+                            .frame(maxWidth: .infinity).padding(.vertical, 11).padding(.horizontal, 10)
+                            .background(active ? R.opacity(0.45) : R.opacity(0.10))
+                            .overlay(Rectangle().stroke(active ? R : R.opacity(0.35), lineWidth: active ? 1 : 0.5))
                         }
                         .buttonStyle(TactileButtonStyle())
                     }
@@ -573,22 +654,7 @@ struct MixerView: View {
             .foregroundColor(R.opacity(0.35)).tracking(1)
     }
 
-    private func applyCrossfader() {
-        let aLevel: Float = 1.0 - crossfaderPos
-        let bLevel: Float = crossfaderPos
-        for i in 0..<mixerState.channels.count {
-            let inA = crossfaderA.contains(i)
-            let inB = crossfaderB.contains(i)
-            if inA && inB {
-                mixerState.channels[i].faderLevel = max(aLevel, bLevel)
-            } else if inA {
-                mixerState.channels[i].faderLevel = aLevel
-            } else if inB {
-                mixerState.channels[i].faderLevel = bLevel
-            }
-            // Channels not in either bus keep their manual fader level
-        }
-    }
+    // applyCrossfader was moved to MixerState so the master LFO can call it too.
 
     private func chSelectBtn(_ i: Int, selected: Bool, action: @escaping () -> Void) -> some View {
         Button { action(); Haptics.tap() } label: {
@@ -679,11 +745,15 @@ struct FXParamsButton: View {
 
     var body: some View {
         Button { onTap(); Haptics.tap() } label: {
-            Image(systemName: "slider.horizontal.below.square.and.square.filled")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(hasActivity ? .white : .gray)
-                .padding(.horizontal, 5).padding(.vertical, 4)
-                .background(hasActivity ? color.opacity(0.25) : Color.white.opacity(0.03))
+            HStack(spacing: 3) {
+                Image(systemName: "slider.horizontal.below.square.and.square.filled")
+                    .font(.system(size: 13, weight: .bold))
+                Text("FX").font(.system(size: 10, weight: .black, design: .monospaced))
+            }
+            .foregroundColor(hasActivity ? .white : .gray)
+            .padding(.horizontal, 8).padding(.vertical, 9)
+            .background(hasActivity ? color.opacity(0.3) : Color.white.opacity(0.04))
+            .overlay(Rectangle().stroke(hasActivity ? color : Color.white.opacity(0.1), lineWidth: hasActivity ? 1 : 0.5))
         }
         .buttonStyle(TactileButtonStyle())
     }
@@ -738,23 +808,6 @@ struct FXParamsPanel: View {
                         }
                     }
                 }
-
-                // Freeze toggle
-                HStack {
-                    Image(systemName: "snowflake").font(.system(size: 12))
-                    Text("FREEZE")
-                        .font(.system(size: 12, weight: .black, design: .monospaced))
-                        .foregroundColor(channel.isFrozen ? R : .gray)
-                    Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { channel.isFrozen },
-                        set: { channel.isFrozen = $0 }
-                    ))
-                    .labelsHidden()
-                    .tint(R)
-                }
-                .padding(10)
-                .background(channel.isFrozen ? R.opacity(0.3) : Color.white.opacity(0.03))
 
                 // Effect-specific parameters
                 if channel.effectType != .none && channel.effectType != .freeze {
@@ -870,10 +923,14 @@ struct FXParamsPanel: View {
                 Text(label)
                     .font(.system(size: 10, weight: .black, design: .monospaced))
                     .foregroundColor(.gray)
-                Spacer()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
                 Text("\(Int(value.wrappedValue * 100))%")
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(.white.opacity(0.8))
+                    .lineLimit(1)
             }
             Slider(
                 value: Binding(get: { Double(value.wrappedValue) }, set: { value.wrappedValue = Float($0) }),
@@ -920,10 +977,11 @@ struct AudioReactButton: View {
             HStack(spacing: 3) {
                 Image(systemName: "waveform").font(.system(size: 11))
                 Text("AUDIO").font(.system(size: 9, weight: .heavy, design: .monospaced))
+                    .lineLimit(1).minimumScaleFactor(0.7)
             }
             .foregroundColor(on ? .white : .gray)
-            .frame(maxWidth: .infinity).padding(.vertical, 5)
-            .background(on ? WMRed.opacity(0.4) : Color.white.opacity(0.02))
+            .frame(maxWidth: .infinity).padding(.vertical, 7)
+            .background(on ? WMRed.opacity(0.4) : Color.white.opacity(0.03))
             .overlay(Rectangle().stroke(on ? WMRed : Color.white.opacity(0.1), lineWidth: on ? 1 : 0.5))
             .contentShape(Rectangle())
         }.buttonStyle(TactileButtonStyle())
@@ -939,10 +997,11 @@ struct ChannelColorButton: View {
             HStack(spacing: 3) {
                 Image(systemName: "paintpalette").font(.system(size: 11))
                 Text("COLOR").font(.system(size: 9, weight: .heavy, design: .monospaced))
+                    .lineLimit(1).minimumScaleFactor(0.7)
             }
             .foregroundColor(on ? .white : .gray)
-            .frame(maxWidth: .infinity).padding(.vertical, 5)
-            .background(on ? WMRed.opacity(0.4) : Color.white.opacity(0.02))
+            .frame(maxWidth: .infinity).padding(.vertical, 7)
+            .background(on ? WMRed.opacity(0.4) : Color.white.opacity(0.03))
             .overlay(Rectangle().stroke(on ? WMRed : Color.white.opacity(0.1), lineWidth: on ? 1 : 0.5))
             .contentShape(Rectangle())
         }.buttonStyle(TactileButtonStyle())

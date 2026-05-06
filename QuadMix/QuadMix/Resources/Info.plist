@@ -27,5 +27,11 @@
     </array>
     <key>UISupportsMultipleWindows</key>
     <true/>
+    <!-- Export-compliance exemption: WasteMix uses only the encryption
+         already present in iOS (HTTPS via URLSession, NDI's standard TLS,
+         OS-level keychain/file protection). Setting this to false avoids
+         re-answering the App Encryption Documentation form on every build. -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
 </dict>
 </plist>

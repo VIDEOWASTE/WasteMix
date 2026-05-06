@@ -36,7 +36,11 @@ struct PreviewView: UIViewRepresentable {
 
         init(device: MTLDevice) {
             self.device = device
-            self.commandQueue = device.makeCommandQueue()
+            // Share the engine's command queue so reads here are properly
+            // serialized with writes happening in RenderEngine.tickRender().
+            // A separate queue caused tearing/flicker on the Advanced Output
+            // canvas because Metal only auto-syncs textures within a queue.
+            self.commandQueue = MetalContext.shared.commandQueue
             self.pipelineState = MetalContext.shared.passthroughPipeline
             super.init()
         }
