@@ -202,18 +202,18 @@ struct KeySettingsView: View {
             .pickerStyle(.segmented)
 
             if channel.keySettings.type != .none {
-                CorrectionSlider(label: "Threshold", value: Binding(
+                CorrectionSlider(label: "THRESH", value: Binding(
                     get: { channel.keySettings.threshold },
                     set: { channel.keySettings.threshold = $0 }
                 ), range: 0...1, tint: .green)
 
-                CorrectionSlider(label: "Softness", value: Binding(
+                CorrectionSlider(label: "SOFT", value: Binding(
                     get: { channel.keySettings.softness },
                     set: { channel.keySettings.softness = $0 }
                 ), range: 0...0.5, tint: .green)
 
                 if channel.keySettings.type == .chromaKey {
-                    CorrectionSlider(label: "Key Hue", value: Binding(
+                    CorrectionSlider(label: "HUE", value: Binding(
                         get: { channel.keySettings.keyHue },
                         set: { channel.keySettings.keyHue = $0 }
                     ), range: 0...360, format: "%.0f", tint: .green)

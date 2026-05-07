@@ -224,15 +224,30 @@ struct AdvancedOutputView: View {
 
             Spacer(minLength: 4)
 
-            // Zoom controls grouped into a single fixed-width HStack so the
-            // outer flex spacers can't compress or clip individual buttons
-            // (which had been swallowing taps on the left-side button when
-            // the row was tight).
-            HStack(spacing: 4) {
-                Image(systemName: "minus.magnifyingglass")
-                    .font(.system(size: 16, weight: .bold))
+            // Right-side cluster: SNAP magnet + zoom −/%/+ controls. Grouped
+            // into a single fixed-width HStack so outer flex spacers can't
+            // compress or clip individual buttons. All four buttons share the
+            // same compact 32×26 frame so the row reads as one unit.
+            HStack(spacing: 3) {
+                let snap = outputConfig.snapToCanvas
+                Button {
+                    outputConfig.snapToCanvas.toggle()
+                    Haptics.tap()
+                } label: {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(snap ? .white : .white.opacity(0.7))
+                        .frame(width: 32, height: 26)
+                        .background(snap ? R.opacity(0.45) : Color.white.opacity(0.10))
+                        .overlay(Rectangle().stroke(snap ? R : Color.white.opacity(0.25), lineWidth: 0.5))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(TactileButtonStyle())
+
+                Image(systemName: "minus")
+                    .font(.system(size: 13, weight: .heavy))
                     .foregroundColor(.white)
-                    .frame(width: 48, height: 36)
+                    .frame(width: 32, height: 26)
                     .background(Color.white.opacity(0.10))
                     .overlay(Rectangle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
                     .contentShape(Rectangle())
@@ -243,9 +258,9 @@ struct AdvancedOutputView: View {
                     }
 
                 Text("\(Int(canvasZoom * 100))%")
-                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                    .font(.system(size: 9, weight: .heavy, design: .monospaced))
                     .foregroundColor(.gray)
-                    .frame(width: 50, height: 36)
+                    .frame(width: 38, height: 26)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         canvasZoom = 1.0
@@ -253,10 +268,10 @@ struct AdvancedOutputView: View {
                         Haptics.tap()
                     }
 
-                Image(systemName: "plus.magnifyingglass")
-                    .font(.system(size: 16, weight: .bold))
+                Image(systemName: "plus")
+                    .font(.system(size: 13, weight: .heavy))
                     .foregroundColor(.white)
-                    .frame(width: 48, height: 36)
+                    .frame(width: 32, height: 26)
                     .background(Color.white.opacity(0.10))
                     .overlay(Rectangle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
                     .contentShape(Rectangle())
@@ -521,8 +536,20 @@ struct AdvancedOutputView: View {
                                         }
                                         let dx = Float(drag.translation.width / canvasW)
                                         let dy = Float(drag.translation.height / canvasH)
-                                        outputConfig.screens[idx].slices[selIdx].outputX = max(-1, min(2, dragStartX + dx))
-                                        outputConfig.screens[idx].slices[selIdx].outputY = max(-1, min(2, dragStartY + dy))
+                                        var newX = dragStartX + dx
+                                        var newY = dragStartY + dy
+                                        if outputConfig.snapToCanvas {
+                                            let sliceW = outputConfig.screens[idx].slices[selIdx].outputW
+                                            let sliceH = outputConfig.screens[idx].slices[selIdx].outputH
+                                            let t: Float = 0.025
+                                            // Left / right edge → 0 or 1 - sliceW
+                                            if abs(newX) < t { newX = 0 }
+                                            else if abs(newX + sliceW - 1) < t { newX = 1 - sliceW }
+                                            if abs(newY) < t { newY = 0 }
+                                            else if abs(newY + sliceH - 1) < t { newY = 1 - sliceH }
+                                        }
+                                        outputConfig.screens[idx].slices[selIdx].outputX = max(-1, min(2, newX))
+                                        outputConfig.screens[idx].slices[selIdx].outputY = max(-1, min(2, newY))
                                     }
                                     .onEnded { _ in
                                         isDraggingSlice = false
@@ -555,6 +582,11 @@ struct AdvancedOutputView: View {
                                         let bottom = cornerStartY + cornerStartH
                                         var newX = max(-1, min(right - 0.05, Float((drag.location.x - ox) / canvasW)))
                                         var newY = max(-1, min(bottom - 0.05, Float((drag.location.y - oy) / canvasH)))
+                                        if outputConfig.snapToCanvas {
+                                            let t: Float = 0.025
+                                            if abs(newX) < t { newX = 0 }
+                                            if abs(newY) < t { newY = 0 }
+                                        }
                                         if lock {
                                             let aspect = lockAspect
                                             let dxN = right - newX
@@ -588,6 +620,11 @@ struct AdvancedOutputView: View {
                                         }
                                         var newW = max(0.05, min(2 - cornerStartX, Float((drag.location.x - x) / canvasW)))
                                         var newH = max(0.05, min(2 - cornerStartY, Float((drag.location.y - y) / canvasH)))
+                                        if outputConfig.snapToCanvas {
+                                            let t: Float = 0.025
+                                            if abs(cornerStartX + newW - 1) < t { newW = 1 - cornerStartX }
+                                            if abs(cornerStartY + newH - 1) < t { newH = 1 - cornerStartY }
+                                        }
                                         if lock {
                                             let aspect = lockAspect
                                             // Pick whichever axis moved more from start
@@ -616,6 +653,11 @@ struct AdvancedOutputView: View {
                                         let bottom = cornerStartY + cornerStartH
                                         var newW = max(0.05, min(2 - cornerStartX, Float((drag.location.x - x) / canvasW)))
                                         var newY = max(-1, min(bottom - 0.05, Float((drag.location.y - oy) / canvasH)))
+                                        if outputConfig.snapToCanvas {
+                                            let t: Float = 0.025
+                                            if abs(cornerStartX + newW - 1) < t { newW = 1 - cornerStartX }
+                                            if abs(newY) < t { newY = 0 }
+                                        }
                                         var newH = bottom - newY
                                         if lock {
                                             let aspect = lockAspect
@@ -645,8 +687,13 @@ struct AdvancedOutputView: View {
                                         }
                                         let right = cornerStartX + cornerStartW
                                         var newX = max(-1, min(right - 0.05, Float((drag.location.x - ox) / canvasW)))
-                                        var newW = right - newX
                                         var newH = max(0.05, min(2 - cornerStartY, Float((drag.location.y - y) / canvasH)))
+                                        if outputConfig.snapToCanvas {
+                                            let t: Float = 0.025
+                                            if abs(newX) < t { newX = 0 }
+                                            if abs(cornerStartY + newH - 1) < t { newH = 1 - cornerStartY }
+                                        }
+                                        var newW = right - newX
                                         if lock {
                                             let aspect = lockAspect
                                             if abs(newW - cornerStartW) > abs(newH - cornerStartH) {
@@ -836,18 +883,19 @@ struct AdvancedOutputView: View {
                         outputConfig.selectedSliceIndex = 0
                     } label: {
                         Text(screen.name)
-                            .font(.system(size: sf(8, sc), weight: .black, design: .monospaced))
+                            .font(.system(size: sf(11, sc), weight: .black, design: .monospaced))
+                            .lineLimit(1).minimumScaleFactor(0.7)
                             .foregroundColor(sel ? .white : .gray)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, scaled(3, sc))
+                            .padding(.vertical, scaled(7, sc))
                             .background(sel ? R.opacity(0.3) : Color.white.opacity(0.03))
                             .overlay(VStack { Rectangle().fill(sel ? R : Color.clear).frame(height: scaled(2, sc)); Spacer() })
                     }
                     .buttonStyle(TactileButtonStyle())
                 }
                 Button { outputConfig.addScreen() } label: {
-                    Image(systemName: "plus").font(.system(size: sf(8, sc), weight: .bold)).foregroundColor(R)
-                        .padding(scaled(3, sc))
+                    Image(systemName: "plus").font(.system(size: sf(12, sc), weight: .bold)).foregroundColor(R)
+                        .padding(scaled(6, sc))
                 }
             }
 
@@ -885,15 +933,15 @@ struct AdvancedOutputView: View {
                         outputConfig.screens[idx].destination = dest
                         if dest == .ndi { outputConfig.screens[idx].ndiOutputEnabled = true }
                     } label: {
-                        VStack(spacing: 3) {
-                            Image(systemName: dest.icon).font(.system(size: 14, weight: .semibold))
-                            Text(dest.displayName).font(.system(size: 9, weight: .heavy, design: .monospaced))
+                        VStack(spacing: 4) {
+                            Image(systemName: dest.icon).font(.system(size: 18, weight: .semibold))
+                            Text(dest.displayName).font(.system(size: 11, weight: .heavy, design: .monospaced))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.6)
                         }
                         .foregroundColor(sel ? .white : .gray)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
+                        .padding(.vertical, 12)
                         .background(sel ? R.opacity(0.3) : Color.white.opacity(0.04))
                         .overlay(VStack { Rectangle().fill(sel ? R : Color.clear).frame(height: 2); Spacer() })
                     }
@@ -1493,10 +1541,10 @@ struct AdvancedOutputView: View {
     // MARK: - Helpers
 
     private func sectionHeader(_ text: String, _ sc: CGFloat) -> some View {
-        HStack(spacing: 4) {
-            Rectangle().fill(R).frame(width: 2, height: 12)
-            Text(text).font(.system(size: 9, weight: .black, design: .monospaced))
-                .foregroundColor(R.opacity(0.8)).tracking(0.5)
+        HStack(spacing: 5) {
+            Rectangle().fill(R).frame(width: 3, height: 14)
+            Text(text).font(.system(size: 11, weight: .black, design: .monospaced))
+                .foregroundColor(R.opacity(0.9)).tracking(0.8)
         }
     }
 

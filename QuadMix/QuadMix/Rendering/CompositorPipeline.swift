@@ -61,20 +61,19 @@ final class CompositorPipeline {
             return
         }
 
-        // Channel 0 → base layer
-        let first = channels[0]
-        let firstTex = applyPIPIfNeeded(ch: first, commandBuffer: commandBuffer)
-        if let progress = first.wipeProgress, let dir = first.wipeDirection {
-            renderWipeFromBlack(texture: firstTex, progress: progress, direction: dir, target: texA, commandBuffer: commandBuffer)
-        } else {
-            renderWithOpacity(texture: firstTex, opacity: first.opacity, target: texA, commandBuffer: commandBuffer)
-        }
-
+        // Vixid / Resolume-style: every channel respects its own blend mode,
+        // including channel 1. Start with a black program, then composite each
+        // channel via its blend mode against the accumulated result. Most
+        // modes are identity-on-black for the first layer (Normal, Add,
+        // Screen, Difference, Lighten, etc. all return the layer unchanged
+        // when blended over black) so this is visually transparent for those
+        // modes — but Multiply / HSL / Hard Mix on channel 1 will now
+        // correctly resolve to black, matching pro-mixer behavior.
+        clearToBlack(texA, commandBuffer: commandBuffer)
         var src = texA
         var dst = texB
 
-        // Channels 1+
-        for i in 1..<channels.count {
+        for i in 0..<channels.count {
             let ch = channels[i]
             let chTex = applyPIPIfNeeded(ch: ch, commandBuffer: commandBuffer)
 
@@ -168,9 +167,19 @@ final class CompositorPipeline {
         enc.endEncoding()
     }
 
-    /// Standard blend
+    /// Standard blend. Falls back to `.normal` if the requested mode's pipeline
+    /// somehow isn't registered — silently dropping the channel made debugging
+    /// "I picked X and nothing happened" reports impossible.
     private func blendNormal(base: MTLTexture, layer: MTLTexture, mode: ChannelBlendMode, opacity: Float, target: MTLTexture, commandBuffer: MTLCommandBuffer) {
-        guard let pipeline = ctx.blendPipelines[mode] else { return }
+        let pipeline: MTLRenderPipelineState
+        if let p = ctx.blendPipelines[mode] {
+            pipeline = p
+        } else if let normal = ctx.blendPipelines[.normal] {
+            Self.warnMissingPipeline(for: mode)
+            pipeline = normal
+        } else {
+            return
+        }
         let desc = renderPass(target, clear: false)
         guard let enc = commandBuffer.makeRenderCommandEncoder(descriptor: desc) else { return }
         enc.setRenderPipelineState(pipeline)
@@ -181,6 +190,13 @@ final class CompositorPipeline {
         enc.setFragmentBytes(&u, length: MemoryLayout<BlendUniforms>.size, index: 0)
         enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
         enc.endEncoding()
+    }
+
+    private static var warnedMissingModes: Set<ChannelBlendMode> = []
+    private static func warnMissingPipeline(for mode: ChannelBlendMode) {
+        guard !warnedMissingModes.contains(mode) else { return }
+        warnedMissingModes.insert(mode)
+        print("CompositorPipeline: blend pipeline missing for '\(mode.rawValue)' — falling back to normal. Check that blend_\(mode.rawValue) exists in BlendModes.metal and the file is in the target's Compile Sources.")
     }
 
     private func passthrough(source: MTLTexture, target: MTLTexture, commandBuffer: MTLCommandBuffer) {

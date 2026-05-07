@@ -451,8 +451,6 @@ struct MixerView: View {
             HStack(alignment: .top, spacing: 0) {
                 // Crossfader
                 VStack(spacing: 4) {
-                    mstLabel("CROSSFADER")
-
                     // A selector — multi-select
                     HStack(spacing: 2) {
                         Text("A").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(R.opacity(0.5)).frame(width: 12)
@@ -499,7 +497,6 @@ struct MixerView: View {
                     // Same shape as the per-channel "transition + GO" cell:
                     // click-through label opens the panel, separate toggle
                     // turns the LFO on/off without opening it.
-                    mstLabel("AUTOMATION")
                     let mlOn = mixerState.masterLFO.isActive
                     HStack(spacing: 2) {
                         Button { activePanel = .masterLFO; Haptics.tap() } label: {
@@ -535,7 +532,6 @@ struct MixerView: View {
                     Rectangle().fill(R.opacity(0.06)).frame(height: 0.5).padding(.vertical, 2)
 
                     // Tap tempo
-                    mstLabel("TEMPO")
                     TapTempoView(bpm: Binding(get: { mixerState.bpm }, set: { mixerState.bpm = $0 }))
                 }
                 .padding(6)
@@ -546,12 +542,13 @@ struct MixerView: View {
                 // Right column: global color, quick, tempo, presets
                 VStack(spacing: 0) {
                     // Global Color
-                    mstCellView(label: "GLOBAL COLOR") {
+                    mstCellView {
                         let active = !mixerState.globalColorCorrection.isIdentity
                         Button { activePanel = .globalColor; Haptics.tap() } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "paintpalette.fill").font(.system(size: 11))
-                                Text(active ? "ACTIVE" : "OFF").font(.system(size: 7, weight: .heavy, design: .monospaced))
+                                Text("GLOBAL COLOR").font(.system(size: 9, weight: .black, design: .monospaced))
+                                    .lineLimit(1).minimumScaleFactor(0.7)
                                 Spacer()
                                 if active { Circle().fill(R).frame(width: 6, height: 6).shadow(color: R.opacity(0.5), radius: 3) }
                             }
@@ -566,7 +563,7 @@ struct MixerView: View {
                     Rectangle().fill(R.opacity(0.04)).frame(height: 0.5)
 
                     // Fade to black + recall (restores pre-fade fader values)
-                    mstCellView(label: "MASTER") {
+                    mstCellView {
                         HStack(spacing: 3) {
                             // Active only when at least one channel has output
                             // — fading to black from already-black is a no-op.
@@ -625,36 +622,19 @@ struct MixerView: View {
                         }
                     }
 
-                    Rectangle().fill(R.opacity(0.04)).frame(height: 0.5)
-
-                    // Presets
-                    mstCellView(label: "PRESET") {
-                        HStack(spacing: 3) {
-                            bigMstBtn("SAVE", icon: "square.and.arrow.down", fg: R.opacity(0.7), bg: Color(red: 1.0, green: 0.15, blue: 0.15).opacity(0.05)) {
-                                let p = presetManager.capture(from: mixerState, name: "P\(presetManager.presets.count+1)", crossfaderPos: mixerState.crossfaderPos, bpm: mixerState.bpm)
-                                presetManager.save(preset: p); Haptics.success()
-                            }
-                            Button { activePanel = .presets; Haptics.tap() } label: {
-                                VStack(spacing: 1) {
-                                    Image(systemName: "list.bullet").font(.system(size: 10))
-                                    Text("LOAD").font(.system(size: 6, weight: .heavy, design: .monospaced))
-                                }
-                                .foregroundColor(.gray).frame(maxWidth: .infinity).padding(.vertical, 6)
-                                .background(Rectangle().fill(Color.white.opacity(0.03)))
-                            }.buttonStyle(TactileButtonStyle())
-                        }
-                    }
+                    // Flexible gap so the bottom-of-column group (Advanced
+                    // Output + Save/Load) is pushed down to align with TAP
+                    // TEMPO at the bottom of the left column. The minLength
+                    // also guarantees breathing room between RECALL and
+                    // ADVANCED OUTPUT so a sloppy tap on one doesn't catch
+                    // the other.
+                    Spacer(minLength: 28)
 
                     Rectangle().fill(R.opacity(0.04)).frame(height: 0.5)
-
-                    // Top spacer pushes the Advanced Output button down so
-                    // it visually lines up with the TAP TEMPO control at the
-                    // bottom of the left column.
-                    Spacer().frame(height: 20)
 
                     // Advanced Output — opens separate window.
                     // Dimmed when closed; brightens when active.
-                    mstCellView(label: "OUTPUT") {
+                    mstCellView {
                         let active = renderEngine.outputConfig.isAdvancedOutputOpen
                         Button {
                             openAdvancedOutput()
@@ -685,6 +665,27 @@ struct MixerView: View {
                         }
                         .buttonStyle(TactileButtonStyle())
                     }
+
+                    Rectangle().fill(R.opacity(0.04)).frame(height: 0.5)
+
+                    // Presets — sit at the bottom of the master right column
+                    // so the heavier Advanced Output button reads first.
+                    mstCellView {
+                        HStack(spacing: 3) {
+                            bigMstBtn("SAVE", icon: "square.and.arrow.down", fg: R.opacity(0.7), bg: Color(red: 1.0, green: 0.15, blue: 0.15).opacity(0.05)) {
+                                let p = presetManager.capture(from: mixerState, name: "P\(presetManager.presets.count+1)", crossfaderPos: mixerState.crossfaderPos, bpm: mixerState.bpm)
+                                presetManager.save(preset: p); Haptics.success()
+                            }
+                            Button { activePanel = .presets; Haptics.tap() } label: {
+                                VStack(spacing: 1) {
+                                    Image(systemName: "list.bullet").font(.system(size: 10))
+                                    Text("LOAD").font(.system(size: 6, weight: .heavy, design: .monospaced))
+                                }
+                                .foregroundColor(.gray).frame(maxWidth: .infinity).padding(.vertical, 6)
+                                .background(Rectangle().fill(Color.white.opacity(0.03)))
+                            }.buttonStyle(TactileButtonStyle())
+                        }
+                    }
                 }
                 .frame(minWidth: 0, maxWidth: .infinity)
             }
@@ -697,11 +698,6 @@ struct MixerView: View {
     private func pill(_ fill: Color) -> some View {
         Rectangle().fill(fill)
             .overlay(Rectangle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
-    }
-
-    private func mstLabel(_ text: String) -> some View {
-        Text(text).font(.system(size: 6, weight: .heavy, design: .monospaced))
-            .foregroundColor(R.opacity(0.35)).tracking(1)
     }
 
     // applyCrossfader was moved to MixerState so the master LFO can call it too.
@@ -721,13 +717,10 @@ struct MixerView: View {
         }.buttonStyle(TactileButtonStyle())
     }
 
-    private func mstCellView<C: View>(label: String, @ViewBuilder content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label).font(.system(size: 5, weight: .heavy, design: .monospaced))
-                .foregroundColor(R.opacity(0.3)).tracking(1)
-            content()
-        }
-        .padding(.horizontal, 6).padding(.vertical, 5)
+    private func mstCellView<C: View>(@ViewBuilder content: () -> C) -> some View {
+        content()
+            .padding(.horizontal, 6)
+            .padding(.vertical, 5)
     }
 
     private func bigMstBtn(_ label: String, icon: String, fg: Color, bg: Color, action: @escaping () -> Void) -> some View {
@@ -889,10 +882,16 @@ struct FXParamsPanel: View {
 
                 Divider()
 
+                // LFO — sits between EFFECT and KEYING so the effect-modulation
+                // controls live next to the effect they drive.
+                LFOView(channel: channel, bpm: bpm)
+
+                Divider()
+
                 // Keying
                 VStack(alignment: .leading, spacing: 4) {
                     Text("KEYING")
-                        .font(.system(size: 8, weight: .black, design: .monospaced))
+                        .font(.system(size: 11, weight: .black, design: .monospaced))
                         .foregroundColor(.gray)
 
                     Picker("Type", selection: Binding(
@@ -906,18 +905,18 @@ struct FXParamsPanel: View {
                     .pickerStyle(.segmented)
 
                     if channel.keySettings.type != .none {
-                        CorrectionSlider(label: "Threshold", value: Binding(
+                        CorrectionSlider(label: "THRESH", value: Binding(
                             get: { channel.keySettings.threshold },
                             set: { channel.keySettings.threshold = $0 }
                         ), range: 0...1, tint: R)
 
-                        CorrectionSlider(label: "Softness", value: Binding(
+                        CorrectionSlider(label: "SOFT", value: Binding(
                             get: { channel.keySettings.softness },
                             set: { channel.keySettings.softness = $0 }
                         ), range: 0...0.5, tint: R)
 
                         if channel.keySettings.type == .chromaKey {
-                            CorrectionSlider(label: "Key Hue", value: Binding(
+                            CorrectionSlider(label: "HUE", value: Binding(
                                 get: { channel.keySettings.keyHue },
                                 set: { channel.keySettings.keyHue = $0 }
                             ), range: 0...360, format: "%.0f", tint: R)
@@ -931,7 +930,7 @@ struct FXParamsPanel: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("PIP / POSITION")
-                            .font(.system(size: 8, weight: .black, design: .monospaced))
+                            .font(.system(size: 11, weight: .black, design: .monospaced))
                             .foregroundColor(.gray)
                         Spacer()
                         if !channel.pipSettings.isDefault {
@@ -941,26 +940,21 @@ struct FXParamsPanel: View {
                         }
                     }
 
-                    CorrectionSlider(label: "Scale (Zoom)", value: Binding(
+                    CorrectionSlider(label: "SCALE", value: Binding(
                         get: { channel.pipSettings.scale },
                         set: { channel.pipSettings.scale = $0 }
                     ), range: 0.1...5.0, format: "%.1fx", tint: R)
 
-                    CorrectionSlider(label: "X Offset", value: Binding(
+                    CorrectionSlider(label: "X POS", value: Binding(
                         get: { channel.pipSettings.offsetX },
                         set: { channel.pipSettings.offsetX = $0 }
                     ), range: -1...1, tint: R)
 
-                    CorrectionSlider(label: "Y Offset", value: Binding(
+                    CorrectionSlider(label: "Y POS", value: Binding(
                         get: { channel.pipSettings.offsetY },
                         set: { channel.pipSettings.offsetY = $0 }
                     ), range: -1...1, tint: R)
                 }
-
-                Divider()
-
-                // LFO
-                LFOView(channel: channel, bpm: bpm)
             }
             .padding()
         }

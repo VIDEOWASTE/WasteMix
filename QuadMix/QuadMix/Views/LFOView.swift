@@ -10,7 +10,7 @@ struct LFOView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("LFO")
-                    .font(.system(size: 9, weight: .black, design: .monospaced))
+                    .font(.system(size: 11, weight: .black, design: .monospaced))
                     .foregroundColor(channel.lfo.isActive ? R : .gray)
                 Spacer()
                 Toggle("", isOn: Binding(

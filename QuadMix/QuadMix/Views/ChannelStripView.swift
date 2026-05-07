@@ -253,11 +253,11 @@ struct ChannelStripView: View {
     }
 
     private var blendCell: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             Text("BLD")
                 .font(.system(size: 7, weight: .heavy, design: .monospaced))
                 .foregroundColor(.gray.opacity(0.4))
-                .frame(width: 22, alignment: .leading)
+                .frame(width: 20, alignment: .leading)
             BlendModePickerView(
                 selectedMode: Binding(
                     get: { channel.blendMode },
@@ -266,7 +266,7 @@ struct ChannelStripView: View {
                 accentColor: channelColor
             )
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 3)
         .padding(.vertical, 3)
     }
 

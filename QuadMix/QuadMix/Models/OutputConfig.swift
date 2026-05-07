@@ -303,6 +303,10 @@ final class OutputConfig {
     var selectedNodeIndex: Int? = nil
     var showMeshWarp: Bool = false
     var canvasEditMode: CanvasEditMode = .transform
+    /// "Magnet" — when true, slice drag/resize edges latch to the output box
+    /// (canvas) edges within a small threshold so slices snap flush to 0/1 in
+    /// normalized canvas space.
+    var snapToCanvas: Bool = false
 
     func addScreen() {
         screens.append(OutputScreen(name: "Output \(screens.count + 1)"))

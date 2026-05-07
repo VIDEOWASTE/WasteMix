@@ -68,7 +68,9 @@ struct CorrectionSlider: View {
             Text(label)
                 .font(.system(size: 10, weight: .heavy, design: .monospaced))
                 .foregroundColor(.gray)
-                .frame(width: 36, alignment: .trailing)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(width: 44, alignment: .trailing)
             Slider(
                 value: Binding(
                     get: { Double(value) },

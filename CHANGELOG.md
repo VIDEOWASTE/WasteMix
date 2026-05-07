@@ -10,6 +10,38 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ---
 
+## [0.0.4] — 2026-05-07
+
+Second TestFlight build. Big polish pass on the master section, FX panel layout, and Advanced Output controls — plus 14 new blend modes and Vixid-style per-channel blend.
+
+### Changed
+- FX-panel section titles unified — KEYING, PIP / POSITION, and LFO bumped to 11pt monospaced black to match EFFECT, so "Keying" and "LFO" no longer get visually lost next to the much larger Effect heading.
+- LFO panel reordered to sit between EFFECT and KEYING (was below PIP). Effect modulation lives next to the effect it drives.
+- Keying labels shortened to fit on one line: `Threshold` → `THRESH`, `Softness` → `SOFT`, `Key Hue` → `HUE`. PIP labels likewise shortened: `Scale (Zoom)` → `SCALE`, `X Offset` → `X POS`, `Y Offset` → `Y POS`. All match the all-caps abbreviation style already used in COLOR CORRECTION.
+- `CorrectionSlider` label column now `lineLimit(1) + minimumScaleFactor(0.6)` and 8pt wider (36→44pt) — long labels shrink instead of wrapping to two lines.
+- Master section sub-labels removed — CROSSFADER, AUTOMATION, TEMPO, GLOBAL COLOR, MASTER, PRESET, OUTPUT tiny gutter labels are gone. Each cell now reads from its own button content. Cleaner, less noise; the only remaining red header is the section MASTER label up top.
+- Global Color cell button text changed from "ACTIVE / OFF" to "GLOBAL COLOR" (the active dot already indicates state — the label was redundant and confusing).
+- SAVE / LOAD presets cell moved below ADVANCED OUTPUT MAPPING in the master right column — the heavier output button now reads first, presets sit at the bottom.
+- Master right column now anchors ADVANCED OUTPUT + SAVE/LOAD to the bottom (lining up with TAP TEMPO on the left), with a flexible `Spacer(minLength: 28)` between FADE/RECALL and ADVANCED OUTPUT — guarantees breathing room so a sloppy tap can't catch the wrong button.
+- Blend mode picker is alphabetical now (categorical sections — Standard / Contrast / Comparative / Special / Logic — replaced with a single flat list sorted A–Z by display name). Reordering done at the enum level so any future picker that iterates `allCases` inherits the order automatically.
+- Blend mode cell ~2pt wider — `BLD` gutter label trimmed 22→20pt and cell horizontal padding 4→3pt give the picker button more tap area.
+
+### Added
+- 14 new blend modes: **Linear Burn**, **Linear Light**, **Vivid Light**, **Pin Light**, **Hard Mix**, **Divide**, **Phoenix**, **Reflect**, **Glow**, **Stamp**, **Hue**, **Saturation**, **Color**, **Luminosity**. Total of 33 modes now. Every mode has a matching `blend_<rawValue>` fragment shader in `BlendModes.metal`; the four HSL modes (Hue / Sat / Color / Luminosity) use Photoshop's `setLum`/`setSat`/`clipColor` algorithm with Rec.601 luma. Vivid Light is a per-channel select between Color Dodge (when layer > 0.5) and Color Burn (when layer ≤ 0.5). Pin Light uses `select(min(b, 2l), max(b, 2l-1), l > 0.5)`. Hard Mix is `step(1 - b, l)` for hard posterize. Phoenix is Resolume's `min(b,l) - max(b,l) + 1`.
+
+### Changed
+- Compositor now respects **every channel's blend mode**, including channel 1 (Vixid / Resolume convention). Previously CH1 was hardcoded to paint over with `passthroughOpacityPipeline`, so its blend mode setting was ignored. The compositor now starts with a cleared (black) program texture and composites all 4 channels through `blend_<mode>` in order. Identity-on-black modes (Normal / Add / Screen / Difference / Lighten / etc.) look the same on CH1 as before; non-identity modes (Multiply / HSL / Hard Mix) on CH1 now resolve against black, matching pro-mixer behavior.
+
+### Fixed
+- `CompositorPipeline.blendNormal` falls back to the `.normal` pipeline (and prints a one-time console warning) if a requested blend mode's pipeline isn't registered, instead of silently dropping the channel from the composite. Makes future "I picked X and nothing happened" reports self-diagnose.
+
+### Added
+- **SNAP** (pin) toggle in Advanced Output — slice translate and corner-resize edges latch to the output box (canvas) edges within ~2.5% of the canvas. Off by default; persists per-session via `OutputConfig.snapToCanvas`. Plays nicely with LOCK aspect (snap runs first, then aspect lock re-derives the orthogonal side). Button sits in the right-side cluster next to the zoom controls.
+- Zoom +/- buttons changed from `minus.magnifyingglass`/`plus.magnifyingglass` to plain `minus`/`plus` glyphs at matching weight/size — the magnifier-variant strokes were noticeably mismatched between + and -. SNAP, −, %, + are all 32×26 now (down from 48×36) so the cluster is compact and unified in size.
+- SCREEN tabs and DESTINATION buttons in the Advanced Output right panel bumped — section header 9→11pt, screen tab text 8→11pt with bigger vertical padding, destination icons 14→18pt and labels 9→11pt with deeper padding. Was getting visually lost.
+
+---
+
 ## [0.0.3] — 2026-05-06
 
 Polish pass on top of the first TestFlight build: external-display fullscreen, master-section RECALL/FADE pair, audio-react default-on, and a pile of UI/touch-target tightening.
@@ -114,7 +146,8 @@ Initial public commit. Mac Catalyst + Windows DirectX builds.
 - Mac Catalyst app shipped as `WasteMix.app`.
 - Windows DirectX 12 / C++ port skeleton (`WasteMixWindows/`).
 
-[Unreleased]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.4...HEAD
+[0.0.4]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/VIDEOWASTE/WasteMix/releases/tag/v0.0.1

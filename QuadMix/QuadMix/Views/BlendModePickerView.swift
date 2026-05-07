@@ -23,6 +23,20 @@ extension ChannelBlendMode {
         case .or: return "OR"
         case .xor: return "XOR"
         case .negation: return "NEG"
+        case .linearBurn: return "LBRN"
+        case .linearLight: return "LLIT"
+        case .vividLight: return "VLIT"
+        case .pinLight: return "PLIT"
+        case .hardMix: return "HMIX"
+        case .divide: return "DIV"
+        case .phoenix: return "PHX"
+        case .reflect: return "RFLT"
+        case .glow: return "GLOW"
+        case .stamp: return "STMP"
+        case .hue: return "HUE"
+        case .saturation: return "SAT"
+        case .color: return "COLR"
+        case .luminosity: return "LUM"
         }
     }
 }
@@ -34,34 +48,8 @@ struct BlendModePickerView: View {
 
     var body: some View {
         Menu {
-            Section("Standard") {
-                blendButton(.normal)
-                blendButton(.add)
-                blendButton(.multiply)
-                blendButton(.screen)
-                blendButton(.overlay)
-            }
-            Section("Contrast") {
-                blendButton(.hardLight)
-                blendButton(.softLight)
-                blendButton(.colorDodge)
-                blendButton(.colorBurn)
-            }
-            Section("Comparative") {
-                blendButton(.difference)
-                blendButton(.exclusion)
-                blendButton(.darken)
-                blendButton(.lighten)
-            }
-            Section("Special") {
-                blendButton(.subtract)
-                blendButton(.average)
-            }
-            Section("Logic / Math") {
-                blendButton(.and)
-                blendButton(.or)
-                blendButton(.xor)
-                blendButton(.negation)
+            ForEach(ChannelBlendMode.allCases) { mode in
+                blendButton(mode)
             }
         } label: {
             HStack(spacing: 5) {
