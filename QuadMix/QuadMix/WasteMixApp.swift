@@ -23,14 +23,21 @@ class WasteMixAppDelegate: NSObject, UIApplicationDelegate {
             self, selector: #selector(sceneDidDisconnect(_:)),
             name: UIScene.didDisconnectNotification, object: nil)
 
-        // Set main mixer window to a compact size
+        // Mac Catalyst — give the mixer a proper Mac-shaped default
+        // window. The previous compact 420×600 was tuned for testing the
+        // Catalyst path from an iPad-first project; on a real Mac it's
+        // tiny and the channel strips squish together.
         #if targetEnvironment(macCatalyst)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             for scene in application.connectedScenes {
                 if let ws = scene as? UIWindowScene {
-                    ws.sizeRestrictions?.minimumSize = CGSize(width: 360, height: 500)
+                    // Min 900×640 keeps all four channel strips legible
+                    // even when the user resizes down. Max is unbounded
+                    // so the mixer can fill an external display if
+                    // desired.
+                    ws.sizeRestrictions?.minimumSize = CGSize(width: 900, height: 640)
                     let geo = UIWindowScene.GeometryPreferences.Mac(
-                        systemFrame: CGRect(x: 60, y: 40, width: 420, height: 600)
+                        systemFrame: CGRect(x: 80, y: 80, width: 1280, height: 800)
                     )
                     ws.requestGeometryUpdate(geo) { _ in }
                     break // only the first (mixer) window
@@ -155,10 +162,14 @@ struct WasteMixApp: App {
                     for scene in UIApplication.shared.connectedScenes {
                         if let ws = scene as? UIWindowScene,
                            ws.title?.contains("Advanced") == true || ws.session.stateRestorationActivity?.activityType.contains("advancedOutput") == true {
-                            ws.sizeRestrictions?.minimumSize = CGSize(width: 280, height: 200)
-                            ws.sizeRestrictions?.maximumSize = CGSize(width: 2000, height: 1400)
+                            // Advanced Output needs room for the canvas
+                            // + slice list + preview thumbnails. Bumped
+                            // from 380×280 (iPad-tuned) to 1100×680 so
+                            // the canvas reads comfortably on a Mac.
+                            ws.sizeRestrictions?.minimumSize = CGSize(width: 720, height: 480)
+                            ws.sizeRestrictions?.maximumSize = CGSize(width: 3200, height: 2000)
                             let geo = UIWindowScene.GeometryPreferences.Mac(
-                                systemFrame: CGRect(x: 500, y: 40, width: 380, height: 280)
+                                systemFrame: CGRect(x: 200, y: 200, width: 1100, height: 680)
                             )
                             ws.requestGeometryUpdate(geo) { _ in }
                         }

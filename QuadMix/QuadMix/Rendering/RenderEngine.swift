@@ -164,8 +164,7 @@ final class RenderEngine: NSObject {
                         blendMode: channel.blendMode,
                         opacity: channel.faderLevel * mixerState.masterLevel,
                         wipeProgress: wipeProgress,
-                        wipeDirection: wipeDirection,
-                        pipSettings: channel.pipSettings
+                        wipeDirection: wipeDirection
                     ))
                 }
             }
@@ -197,7 +196,7 @@ final class RenderEngine: NSObject {
         // Master LFO — routed to the master target.
         if mixerState.masterLFO.isActive {
             let v = mixerState.masterLFO.compute(time: time, bpm: mixerState.bpm)
-            mixerState.masterLFO.currentValue = v
+            mixerState.masterLFOCurrent = v
             switch mixerState.masterLFOTarget {
             case .masterLevel:
                 mixerState.masterLevel = v
@@ -206,8 +205,10 @@ final class RenderEngine: NSObject {
                 mixerState.crossfaderPos = v
                 mixerState.applyCrossfader()
             }
-        } else {
-            // No master LFO running — make sure we're not stuck at a stale dim level.
+        } else if mixerState.masterLevel != 1.0 {
+            // No master LFO running — clear any residual dim, but only if
+            // the value would actually change so we don't invalidate every
+            // observer of masterLevel each frame.
             mixerState.masterLevel = 1.0
         }
 
@@ -215,7 +216,7 @@ final class RenderEngine: NSObject {
             guard channel.lfo.isActive else { continue }
 
             let value = channel.lfo.compute(time: time, bpm: mixerState.bpm)
-            channel.lfo.currentValue = value
+            channel.lfoCurrent = value
 
             switch channel.lfo.target {
             case .opacity:
@@ -242,7 +243,7 @@ final class RenderEngine: NSObject {
 
     private func updateAudioReactivity() {
         for channel in mixerState.channels {
-            var react = channel.audioReact
+            let react = channel.audioReact
             guard react.isActive else { continue }
 
             var rawValue: Float = 0
@@ -257,10 +258,12 @@ final class RenderEngine: NSObject {
             if totalWeight > 0 { rawValue /= totalWeight }
 
             let mapped = react.floor + rawValue * (react.ceiling - react.floor)
-            let prev = react.currentValue
+            let prev = channel.audioReactCurrent
             let smoothed = prev + (mapped - prev) * (1.0 - react.smoothing)
-            react.currentValue = smoothed
-            channel.audioReact = react
+            // Write only the runtime scalar — the user-config (bandGains,
+            // smoothing, floor, ceiling, target, enabled) doesn't change
+            // and shouldn't invalidate observers each frame.
+            channel.audioReactCurrent = smoothed
 
             switch react.target {
             case .opacity:

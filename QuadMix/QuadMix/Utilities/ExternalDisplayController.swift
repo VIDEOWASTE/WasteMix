@@ -25,6 +25,12 @@ final class ExternalDisplayController {
                        name: UIScreen.didDisconnectNotification, object: nil)
     }
 
+    // Singleton lifetime is the app, but a future refactor could turn this
+    // into a non-singleton; clean up properly so a leak doesn't lurk.
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     /// Whether an external (non-main) display is currently attached.
     var hasExternalDisplay: Bool {
         UIScreen.screens.contains(where: { $0 != UIScreen.main })

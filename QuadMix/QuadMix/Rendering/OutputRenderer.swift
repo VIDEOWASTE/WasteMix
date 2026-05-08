@@ -44,8 +44,12 @@ final class OutputRenderer {
     private var meshVertexBuffer: MTLBuffer?
     private var meshVertexBufferSize: Int = 0
 
-    /// Global NDI output for the raw program feed
+    /// Global NDI output for the raw program feed.
+    /// Mutated from Metal completion handlers (which run on Metal's internal
+    /// threads); `globalNDILock` guards the lazy-init so two simultaneous
+    /// frames can't both see nil and both create a sender.
     var globalNDI: NDIOutput?
+    private let globalNDILock = NSLock()
 
     /// Per-slice source resolution. The slice picks `programTexture` (the mix)
     /// or one of the four channel textures. Caller passes both so the slice
@@ -162,15 +166,26 @@ final class OutputRenderer {
 
                 commandBuffer.addCompletedHandler { [weak self] _ in
                     guard let self = self else { return }
+                    // Lazy-init under a lock so two adjacent frames whose
+                    // completion handlers fire on different Metal threads
+                    // can't both create+start the sender.
+                    self.globalNDILock.lock()
                     if self.globalNDI == nil {
-                        self.globalNDI = NDIOutput(name: config.globalNDIName)
-                        self.globalNDI?.start()
+                        let ndi = NDIOutput(name: config.globalNDIName)
+                        ndi.start()
+                        self.globalNDI = ndi
                     }
-                    self.globalNDI?.sendTexture(readback)
+                    let ndi = self.globalNDI
+                    self.globalNDILock.unlock()
+                    ndi?.sendTexture(readback)
                 }
             }
         } else if !config.globalNDIOutput {
-            if globalNDI != nil { globalNDI?.stop(); globalNDI = nil }
+            globalNDILock.lock()
+            let ndi = globalNDI
+            globalNDI = nil
+            globalNDILock.unlock()
+            ndi?.stop()
         }
         // (config.globalNDIOutput && !sendNDI) → just skip this tick, keep sender alive
     }
@@ -180,7 +195,11 @@ final class OutputRenderer {
     }
 
     func shutdown() {
-        globalNDI?.stop()
+        globalNDILock.lock()
+        let g = globalNDI
+        globalNDI = nil
+        globalNDILock.unlock()
+        g?.stop()
         for (_, ndi) in ndiOutputs { ndi.stop() }
         ndiOutputs.removeAll()
     }

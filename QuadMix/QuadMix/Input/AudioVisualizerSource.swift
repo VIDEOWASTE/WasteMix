@@ -47,11 +47,12 @@ final class AudioVisualizerSource: FrameProvider {
     // audio-reactive aspect of the active visualizer.
     private var activeBand: Int = 0
 
-    // All three "broad views" now point at the same selected band so
-    // each visualizer tracks one band's content.
-    private var smoothBass: Float { envelopes[activeBand] }
-    private var smoothMid: Float { envelopes[activeBand] }
-    private var smoothHigh: Float { envelopes[activeBand] }
+    // The selected band's envelope. Single-band routing means every
+    // visualizer reads from this one signal — older draw code referenced
+    // separate `activeLevel / activeLevel / activeLevel` views over the same
+    // envelope, but they were aliases of one value so they were
+    // collapsed to `activeLevel`.
+    private var activeLevel: Float { envelopes[activeBand] }
 
     // Slow moving average of the ACTIVE band's envelope — drives kick
     // and transient detection. Single-band routing means the band the
@@ -200,8 +201,13 @@ final class AudioVisualizerSource: FrameProvider {
         displayLink = nil
     }
 
+    /// Cached default for the silent-channel path. Allocating a new
+    /// `VisualizerParams()` per frame called `defaultEnvelopes()` four
+    /// times per call — wasteful when no channel is bound.
+    private static let defaultParams = VisualizerParams()
+
     private func currentParams() -> VisualizerParams {
-        return channel?.visualizerParams ?? VisualizerParams()
+        return channel?.visualizerParams ?? Self.defaultParams
     }
 
     /// Asymmetric attack/release envelope follower. Frame-rate-independent
@@ -227,14 +233,19 @@ final class AudioVisualizerSource: FrameProvider {
     /// with per-channel time constants. Result lives in `envelopes[i]`
     /// and is read by every audio-reactive draw method.
     private func updateEnvelopes(dt: Float, params: VisualizerParams) {
+        // Pull a single coherent snapshot under the audio engine's lock so
+        // the four bands below all come from the same audio frame — the
+        // older code read seven properties sequentially, letting an audio
+        // callback in between mix frame-N's bass with frame-N+1's high.
+        let s = audioEngine.snapshot()
         // Raw band inputs from AudioEngine, mapped to the 4 channels.
         // LOW combines subBass + bass; MID combines lowMid/mid/highMid;
         // HIGH combines high + brilliance; FULL is overall RMS level.
         let raw: [Float] = [
-            (audioEngine.subBass + audioEngine.bass) * 0.5,                      // 0 LOW
-            (audioEngine.lowMid + audioEngine.mid + audioEngine.highMid) / 3.0,  // 1 MID
-            (audioEngine.high + audioEngine.brilliance) * 0.5,                   // 2 HIGH
-            audioEngine.level                                                     // 3 FULL
+            (s.subBass + s.bass) * 0.5,                      // 0 LOW
+            (s.lowMid + s.mid + s.highMid) / 3.0,            // 1 MID
+            (s.high + s.brilliance) * 0.5,                   // 2 HIGH
+            s.level                                           // 3 FULL
         ]
         // Defensive: VisualizerParams should always have 4 envelopes,
         // but if a malformed preset slipped in, fall back gracefully.
@@ -344,6 +355,16 @@ final class AudioVisualizerSource: FrameProvider {
         ctx.setBlendMode(.normal)
     }
 
+    // MARK: - Kick detection
+    //
+    // Used to be inlined verbatim in 5+ draw methods. The threshold ratio
+    // shrinks as the user dials kickSensitivity up, so a setting of 1.0
+    // makes the visualizer react to gentler peaks.
+    private func detectKick(params: VisualizerParams) -> Bool {
+        let kickRatio: Float = 1.9 - params.kickSensitivity * 0.8
+        return activeLevel > activeBandAvg * kickRatio && activeLevel > 0.005
+    }
+
     fileprivate func render() {
         guard !ring.isEmpty else { return }
 
@@ -360,7 +381,7 @@ final class AudioVisualizerSource: FrameProvider {
         // Pull current params first — needed for envelope shaping below.
         let params = currentParams()
 
-        // Update the user-selected reactive band — drives smoothBass /
+        // Update the user-selected reactive band — drives activeLevel /
         // Mid / High, which is what every audio-reactive draw method
         // reads. Clamp to a valid index so a malformed preset can't
         // crash us.
@@ -371,7 +392,7 @@ final class AudioVisualizerSource: FrameProvider {
         // gate, then runs through an asymmetric attack/release envelope
         // follower with per-channel time constants. The output is a
         // smoothed 0..1 control signal stored in `envelopes[i]`. All the
-        // existing draw code reads `smoothBass / smoothMid / smoothHigh`
+        // existing draw code reads `activeLevel / activeLevel / activeLevel`
         // which are now computed views over this array.
         updateEnvelopes(dt: dt, params: params)
 
@@ -439,7 +460,7 @@ final class AudioVisualizerSource: FrameProvider {
         let resolvedStyle: VisualizerStyle
         if style == .random {
             let timeSinceSwitch = now - lastStyleSwitch
-            let isBassKick = smoothBass > activeBandAvg * 1.6 && smoothBass > 0.01
+            let isBassKick = activeLevel > activeBandAvg * 1.6 && activeLevel > 0.01
             let shouldSwitch = lastStyleSwitch == 0
                 || timeSinceSwitch > Self.randomCycleSeconds
                 || (isBassKick && timeSinceSwitch > Self.randomMinHoldSeconds)
@@ -489,63 +510,6 @@ final class AudioVisualizerSource: FrameProvider {
     }
 
     // MARK: - Literal styles
-
-    private func drawBars(ctx: CGContext, params: VisualizerParams, dt: Float, heightFraction: CGFloat = 0.85) {
-        let spectrum = audioEngine.spectrum
-        guard !spectrum.isEmpty else { return }
-        let bars = 64
-        let barW = CGFloat(width) / CGFloat(bars)
-        // Log-spaced bin mapping: gives bass plenty of horizontal real
-        // estate (where most music lives) and packs the higher frequencies
-        // into the right-side bars, instead of linear which crammed all
-        // the bass into 1-2 bars and let the (mostly empty) upper-mid
-        // dominate.
-        // Skip bin 0 (DC, zeroed in AudioEngine) AND bin 1 (windowing
-        // leakage from the lowest sub-43 Hz content the FFT can't
-        // resolve). Both pegged at 1.0 after normalize, which used to
-        // peg every low-frequency bar at 100%.
-        let minBin: Float = 2
-        let maxBin = Float(max(8, spectrum.count / 4))
-        let ratio = maxBin / minBin
-        let maxH = CGFloat(height) * heightFraction
-        let baseY = CGFloat(height) - maxH * 0.05
-        let intensity = Double(params.intensity)
-        let hueShift = Double(params.hue)
-        for i in 0..<bars {
-            let f0: Float = Float(i) / Float(bars)
-            let f1: Float = Float(i + 1) / Float(bars)
-            // Geometric spacing minBin..maxBin so each bar covers a
-            // proportional slice of the spectrum.
-            let bin0 = minBin * pow(ratio, f0)
-            let bin1 = minBin * pow(ratio, f1)
-            let binStart = max(Int(minBin), Int(bin0))
-            let binEnd = max(binStart + 1, min(Int(maxBin), Int(bin1.rounded(.up))))
-            var rawMag: Float = 0
-            for b in binStart..<binEnd {
-                // Apply the envelope band's GAIN + THRESHOLD per FFT bin
-                // — bins above 80 Hz/250 Hz/2 kHz/8 kHz get multiplied
-                // by SUB/BASS/MID/HIGH/AIR gain respectively. Set BASS
-                // gain to 0 and the bottom of the spectrum drops out.
-                let shaped = applyBandEnvelope(magnitude: spectrum[b], bin: b, params: params)
-                rawMag = max(rawMag, shaped)
-            }
-            smoothedBars[i] = followBar(current: smoothedBars[i], target: rawMag, dt: dt)
-            let mag = smoothedBars[i]
-            // 3.5x scale (was 8x) — that earlier multiplier pegged the
-            // bar at 100% on any bin near 1.0 after normalize, which is
-            // why the bottom half all read full height. 3.5x lets healthy
-            // musical content fill ~70% of the bar field with strong
-            // peaks reaching the top, leaving headroom.
-            let h = CGFloat(min(1, mag * 3.5)) * maxH
-            let x = CGFloat(i) * barW
-            let y = baseY - h
-            let frac = Double(i) / Double(bars)
-            let hue = (hueShift + frac * 0.18).truncatingRemainder(dividingBy: 1.0)
-            let color = UIColor(hue: hue, saturation: 0.9, brightness: 0.4 + Double(mag) * 0.4 + intensity * 0.2, alpha: 1).cgColor
-            ctx.setFillColor(color)
-            ctx.fill(CGRect(x: x + 1, y: y, width: barW - 2, height: h))
-        }
-    }
 
     private func drawWaveform(ctx: CGContext, params: VisualizerParams, dt: Float,
                               yCenter: CGFloat? = nil, amp: CGFloat? = nil) {
@@ -653,7 +617,7 @@ final class AudioVisualizerSource: FrameProvider {
 
         // Stroke outline with the standard 4-pass bloom helper for that
         // neon-on-black glow.
-        let pulse = CGFloat(min(1, smoothBass * 2 + 0.4))
+        let pulse = CGFloat(min(1, activeLevel * 2 + 0.4))
         strokeWithGlow(ctx: ctx, path: path, color: lineColor,
                        baseWidth: 1.5 + pulse * 1.0)
     }
@@ -666,14 +630,13 @@ final class AudioVisualizerSource: FrameProvider {
         // Apply the same kick-detection envelope to brighten + scale on
         // each beat. kickFlash decays alongside transientPulse so the
         // pulse visibly rises and falls instead of a constant boost.
-        let kickRatio: Float = 1.9 - params.kickSensitivity * 0.8
-        let isKick = smoothBass > activeBandAvg * kickRatio && smoothBass > 0.005
+        let isKick = detectKick(params: params)
         let kickGain: CGFloat = isKick
             ? CGFloat(0.4 + params.kickStrength * 0.8)
             : CGFloat(transientPulse) * CGFloat(0.2 + params.kickStrength * 0.3)
-        let bass = CGFloat(smoothBass) * CGFloat(params.bassResponse * 2) + kickGain * 0.3
-        let mid = CGFloat(smoothMid)
-        let high = CGFloat(smoothHigh) + kickGain * 0.2
+        let bass = CGFloat(activeLevel) * CGFloat(params.bassResponse * 2) + kickGain * 0.3
+        let mid = CGFloat(activeLevel)
+        let high = CGFloat(activeLevel) + kickGain * 0.2
 
         // Pure black background — true WMP/Winamp look. The bloom glow
         // needs a black canvas to read as glow; even 5% grey from a hue
@@ -753,9 +716,9 @@ final class AudioVisualizerSource: FrameProvider {
     private func drawTunnel(ctx: CGContext, time t: Float, params: VisualizerParams) {
         let cx = CGFloat(width) * 0.5
         let cy = CGFloat(height) * 0.5
-        let bass = Float(smoothBass) * Float(params.bassResponse * 2)
-        let mid = Float(smoothMid)
-        let high = Float(smoothHigh)
+        let bass = Float(activeLevel) * Float(params.bassResponse * 2)
+        let mid = Float(activeLevel)
+        let high = Float(activeLevel)
         let intensity = Float(params.intensity) + 0.3
 
         // Pure black + a soft motion-blur trail — gives the "moving
@@ -899,13 +862,12 @@ final class AudioVisualizerSource: FrameProvider {
         // and bursts on bass kicks / hi-hat transients. Particles spawn
         // at the top edge with a random x, drift slightly sideways, and
         // fall under gravity.
-        let combinedEnergy = (smoothBass + smoothMid + smoothHigh) / 3
+        let combinedEnergy = (activeLevel + activeLevel + activeLevel) / 3
         // Param-driven kick threshold. kickSensitivity 0..1 maps linearly
         // to ratio 1.9× (strict, only big kicks) → 1.1× (lenient, almost
         // any bass bump). Same formula used by every other variant so
         // tweaking the slider feels consistent across all visualizers.
-        let kickRatio: Float = 1.9 - params.kickSensitivity * 0.8
-        let isBassKick = smoothBass > activeBandAvg * kickRatio && smoothBass > 0.005
+        let isBassKick = detectKick(params: params)
         let baseEmit = max(0, combinedEnergy - 0.005) * 90 * (0.5 + params.density)
         let kickEmit: Float = isBassKick ? 18 + 36 * params.density : 0
         let transientEmit: Float = transientPulse > 0.3 ? 10 + 24 * params.density : 0
@@ -922,7 +884,7 @@ final class AudioVisualizerSource: FrameProvider {
                     let vx = Float.random(in: -40...40)
                     // Vertical speed scales with bass — heavier hits =
                     // faster downpour.
-                    let vy = Float.random(in: 110...260) * (1 + smoothBass * bassResp * 0.6)
+                    let vy = Float.random(in: 110...260) * (1 + activeLevel * bassResp * 0.6)
                     particles[i].x = spawnX
                     particles[i].y = spawnY
                     particles[i].prevX = spawnX
@@ -944,7 +906,7 @@ final class AudioVisualizerSource: FrameProvider {
         let gravity: Float = 380
 
         // Audio reactivity for in-flight particles:
-        // 1. BASS KICK BOUNCE — on every detected kick (smoothBass > 1.4×
+        // 1. BASS KICK BOUNCE — on every detected kick (activeLevel > 1.4×
         //    its slow moving average), every live particle's vertical
         //    velocity flips upward at half magnitude, like raindrops being
         //    smacked back up by the bass.
@@ -954,8 +916,8 @@ final class AudioVisualizerSource: FrameProvider {
         //    don't all swing in lockstep. swayAmount param scales the
         //    overall force (0=calm, 1=default, 2=wild).
         let swayMul: Float = 0.3 + params.swayAmount * 1.4
-        let swayAmp: Float = (80 + smoothMid * 380) * swayMul
-        let swayFreq: Float = 1.6 + smoothMid * 3.0
+        let swayAmp: Float = (80 + activeLevel * 380) * swayMul
+        let swayFreq: Float = 1.6 + activeLevel * 3.0
 
         // Render each live particle as a glowing line trail from its
         // previous position to the new one, capped by a small bright
@@ -973,7 +935,7 @@ final class AudioVisualizerSource: FrameProvider {
                 let kickMul: Float = 0.4 + params.kickStrength * 0.4 // 0.4..1.2
                 let kickBoost: Float = 40 + params.kickStrength * 80   // 40..200
                 particles[i].vy = -abs(particles[i].vy) * kickMul - kickBoost
-                particles[i].vx += Float.random(in: -50...50) * smoothBass * bassResp * (0.5 + params.kickStrength)
+                particles[i].vx += Float.random(in: -50...50) * activeLevel * bassResp * (0.5 + params.kickStrength)
             }
 
             // SWAY — sinusoidal lateral acceleration on top of any other
@@ -1041,7 +1003,7 @@ final class AudioVisualizerSource: FrameProvider {
         // plus radial lens flares wandering across the canvas, plus a
         // bass-driven brightness pulse. Gives the layered "psychedelic
         // depth" feel WMP's Plenoptic visualizer was known for.
-        let bass = smoothBass * params.bassResponse * 2
+        let bass = activeLevel * params.bassResponse * 2
         let intensity = Float(params.intensity) + 0.3
         let huePhase = Float(params.hue)
         let zoom: Float = 3.5 + Float(params.density) * 4.5
@@ -1089,17 +1051,23 @@ final class AudioVisualizerSource: FrameProvider {
 
         let cs = CGColorSpaceCreateDeviceRGB()
         let bi = CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-        plasmaPixels.withUnsafeBufferPointer { buf in
-            guard let provider = CGDataProvider(dataInfo: nil, data: buf.baseAddress!,
-                                                size: buf.count, releaseData: { _, _, _ in }),
-                  let img = CGImage(width: plasmaW, height: plasmaH,
-                                    bitsPerComponent: 8, bitsPerPixel: 32,
-                                    bytesPerRow: plasmaW * 4,
-                                    space: cs, bitmapInfo: CGBitmapInfo(rawValue: bi),
-                                    provider: provider, decode: nil,
-                                    shouldInterpolate: true,
-                                    intent: .defaultIntent)
-            else { return }
+        // Hand CG a CFData (which owns its own copy of the pixels) instead
+        // of a raw pointer into the Swift array — that earlier pattern
+        // worked because the draw is synchronous within the closure, but
+        // it relied on ordering guarantees the CG docs don't make
+        // explicit. ~57KB copy per frame at 160×90 BGRA, well below the
+        // noise floor for a CADisplayLink tick.
+        let plasmaData: CFData = plasmaPixels.withUnsafeBufferPointer {
+            CFDataCreate(nil, $0.baseAddress, $0.count)
+        }
+        if let provider = CGDataProvider(data: plasmaData),
+           let img = CGImage(width: plasmaW, height: plasmaH,
+                             bitsPerComponent: 8, bitsPerPixel: 32,
+                             bytesPerRow: plasmaW * 4,
+                             space: cs, bitmapInfo: CGBitmapInfo(rawValue: bi),
+                             provider: provider, decode: nil,
+                             shouldInterpolate: true,
+                             intent: .defaultIntent) {
             ctx.interpolationQuality = .high
             ctx.draw(img, in: CGRect(x: 0, y: 0, width: width, height: height))
         }
@@ -1144,9 +1112,9 @@ final class AudioVisualizerSource: FrameProvider {
     private func drawOrbs(ctx: CGContext, time t: Float, params: VisualizerParams) {
         let cx = CGFloat(width) * 0.5
         let cy = CGFloat(height) * 0.5
-        let bass = CGFloat(smoothBass) * CGFloat(params.bassResponse * 2)
-        let mid = Float(smoothMid)
-        let high = Float(smoothHigh)
+        let bass = CGFloat(activeLevel) * CGFloat(params.bassResponse * 2)
+        let mid = Float(activeLevel)
+        let high = Float(activeLevel)
         let intensity = Float(params.intensity) + 0.3
 
         // Light frame trail — leaves a soft motion ghost behind each
@@ -1164,8 +1132,7 @@ final class AudioVisualizerSource: FrameProvider {
         }
 
         // Bass-kick flip — same param-driven detection as everywhere else.
-        let kickRatio: Float = 1.9 - params.kickSensitivity * 0.8
-        let isBassKick = smoothBass > activeBandAvg * kickRatio && smoothBass > 0.005
+        let isBassKick = detectKick(params: params)
         if isBassKick && (t - lastOrbFlipTime) > 0.18 {
             // Flip 1-2 random orbs each kick — keeps motion lively
             // without spinning every orb at once on a sustained bassline.
@@ -1393,9 +1360,9 @@ final class AudioVisualizerSource: FrameProvider {
     private func drawGeometry(ctx: CGContext, time t: Float, params: VisualizerParams, dt: Float) {
         let cx = CGFloat(width) * 0.5
         let cy = CGFloat(height) * 0.5
-        let bass = Float(smoothBass) * Float(params.bassResponse * 2)
-        let mid = Float(smoothMid)
-        let high = Float(smoothHigh)
+        let bass = Float(activeLevel) * Float(params.bassResponse * 2)
+        let mid = Float(activeLevel)
+        let high = Float(activeLevel)
 
         // Pure black + mild frame trail for that "floating in space" feel.
         ctx.setFillColor(UIColor(white: 0, alpha: 0.16).cgColor)
@@ -1410,8 +1377,7 @@ final class AudioVisualizerSource: FrameProvider {
         // Bass kick → morph one solid's shape so the geometry visibly
         // transforms on heavy hits. Cycles through all 5 shape types
         // (cube → tetra → octa → pyramid → icosa → repeat).
-        let kickRatio: Float = 1.9 - params.kickSensitivity * 0.8
-        let isBassKick = Float(smoothBass) > Float(activeBandAvg) * kickRatio && smoothBass > 0.005
+        let isBassKick = detectKick(params: params)
         if isBassKick && (t - lastSolidShapeChange) > 0.4 {
             let idx = Int.random(in: 0..<solidCount)
             solids[idx].shapeIdx = (solids[idx].shapeIdx + 1) % Self.shapeCount
@@ -1638,9 +1604,9 @@ final class AudioVisualizerSource: FrameProvider {
     /// Alchemy was known for. Bass drives line width + amplitude; mid
     /// drives the curve frequencies; high adds a brightness shimmer.
     private func drawAlchemy(ctx: CGContext, time t: Float, params: VisualizerParams) {
-        let bass = CGFloat(smoothBass) * CGFloat(params.bassResponse * 2)
-        let mid = Float(smoothMid)
-        let high = Float(smoothHigh)
+        let bass = CGFloat(activeLevel) * CGFloat(params.bassResponse * 2)
+        let mid = Float(activeLevel)
+        let high = Float(activeLevel)
         let count = max(4, Int(4 + params.density * 8))
         let H = CGFloat(height)
         let W = CGFloat(width)
@@ -1703,8 +1669,7 @@ final class AudioVisualizerSource: FrameProvider {
         // Spawn a new bolt on bass kick OR hi-hat transient. Same
         // param-driven kick threshold as everywhere else so the
         // sensitivity slider behaves consistently across visualizers.
-        let kickRatio: Float = 1.9 - params.kickSensitivity * 0.8
-        let isBassKick = smoothBass > activeBandAvg * kickRatio && smoothBass > 0.005
+        let isBassKick = detectKick(params: params)
         let isTransient = transientPulse > 0.4
         if (isTransient || isBassKick) && bolts.count < Int(2 + params.density * 6) {
             spawnBolt(params: params)
@@ -1724,7 +1689,7 @@ final class AudioVisualizerSource: FrameProvider {
             if bolts[i].life <= 0 { bolts.remove(at: i); continue }
             let life = CGFloat(bolts[i].life)
             let hue: Double = Double(bolts[i].hue)
-            let bassW: CGFloat = CGFloat(smoothBass)
+            let bassW: CGFloat = CGFloat(activeLevel)
             // Build the bolt path once, then bloom + bright core.
             let path = boltPath(bolts[i])
             let haloColor = UIColor(hue: hue, saturation: 0.55, brightness: 1.0, alpha: 1)
@@ -1789,22 +1754,14 @@ final class AudioVisualizerSource: FrameProvider {
         bolts.append(Bolt(points: pts, life: 1.0, hue: Float.random(in: 0...0.2) + params.hue))
     }
 
-    private func strokeBolt(ctx: CGContext, bolt: Bolt) {
-        guard bolt.points.count > 1 else { return }
-        ctx.beginPath()
-        ctx.move(to: bolt.points[0])
-        for i in 1..<bolt.points.count { ctx.addLine(to: bolt.points[i]) }
-        ctx.strokePath()
-    }
-
     // MARK: - Plasma: Mandala
 
     private func drawMandala(ctx: CGContext, time t: Float, params: VisualizerParams) {
         let cx = CGFloat(width) * 0.5
         let cy = CGFloat(height) * 0.5
-        let bass = CGFloat(smoothBass) * CGFloat(params.bassResponse * 2)
-        let mid = CGFloat(smoothMid)
-        let high = CGFloat(smoothHigh)
+        let bass = CGFloat(activeLevel) * CGFloat(params.bassResponse * 2)
+        let mid = CGFloat(activeLevel)
+        let high = CGFloat(activeLevel)
         // 8-fold symmetric pattern. Build a single "wedge" shape, then
         // rotate/draw N times for the kaleidoscope feel.
         let folds = max(4, Int(4 + params.density * 12))
@@ -1882,8 +1839,8 @@ final class AudioVisualizerSource: FrameProvider {
     private func drawSpiral(ctx: CGContext, time t: Float, params: VisualizerParams) {
         let cx = CGFloat(width) * 0.5
         let cy = CGFloat(height) * 0.5
-        let bass = CGFloat(smoothBass) * CGFloat(params.bassResponse * 2)
-        let high = CGFloat(smoothHigh)
+        let bass = CGFloat(activeLevel) * CGFloat(params.bassResponse * 2)
+        let high = CGFloat(activeLevel)
         let arms = max(2, Int(2 + params.density * 6))
         let rotBase: CGFloat = CGFloat(t) * 0.6
         let rMax: CGFloat = CGFloat(min(width, height)) * 0.45 * (1 + bass * 0.4)
@@ -1929,9 +1886,9 @@ final class AudioVisualizerSource: FrameProvider {
     // MARK: - Plasma: Ribbons
 
     private func drawRibbons(ctx: CGContext, time t: Float, params: VisualizerParams) {
-        let bass = CGFloat(smoothBass) * CGFloat(params.bassResponse * 2)
-        let mid = CGFloat(smoothMid)
-        let high = CGFloat(smoothHigh)
+        let bass = CGFloat(activeLevel) * CGFloat(params.bassResponse * 2)
+        let mid = CGFloat(activeLevel)
+        let high = CGFloat(activeLevel)
         let count = max(3, Int(3 + params.density * 9))
         let H = CGFloat(height)
         let W = CGFloat(width)

@@ -17,19 +17,20 @@ final class DisplayManager {
     private(set) var externalDisplays: [ConnectedDisplay] = []
     private(set) var allDisplays: [ConnectedDisplay] = []
 
-    private var observer: Any?
+    private var observers: [NSObjectProtocol] = []
 
     init() {
         refreshDisplays()
 
         // Listen for display configuration changes (works on both Catalyst and iPad)
-        observer = NotificationCenter.default.addObserver(
+        let nc = NotificationCenter.default
+        observers.append(nc.addObserver(
             forName: UIScreen.didConnectNotification, object: nil, queue: .main
-        ) { [weak self] _ in self?.refreshDisplays() }
+        ) { [weak self] _ in self?.refreshDisplays() })
 
-        NotificationCenter.default.addObserver(
+        observers.append(nc.addObserver(
             forName: UIScreen.didDisconnectNotification, object: nil, queue: .main
-        ) { [weak self] _ in self?.refreshDisplays() }
+        ) { [weak self] _ in self?.refreshDisplays() })
 
         // Also poll on a timer for CG display changes (Catalyst doesn't always notify)
         #if targetEnvironment(macCatalyst)
@@ -38,7 +39,11 @@ final class DisplayManager {
     }
 
     deinit {
-        if let o = observer { NotificationCenter.default.removeObserver(o) }
+        for o in observers { NotificationCenter.default.removeObserver(o) }
+        #if targetEnvironment(macCatalyst)
+        pollTimer?.invalidate()
+        pollTimer = nil
+        #endif
     }
 
     func refreshDisplays() {

@@ -19,7 +19,7 @@ enum AudioReactTarget: String, CaseIterable, Identifiable, Codable {
 }
 
 /// Per-channel audio EQ / reactivity settings
-struct AudioReactSettings {
+struct AudioReactSettings: Codable {
     var enabled: Bool = false
     var target: AudioReactTarget = .opacity
 
@@ -37,8 +37,11 @@ struct AudioReactSettings {
     /// Maximum output value (ceiling)
     var ceiling: Float = 1.0
 
-    /// The current computed reactive value (0-1), updated each frame
-    var currentValue: Float = 0
+    // `currentValue` was moved to `Channel.audioReactCurrent` for the same
+    // observation-fan-out reason as the LFO's currentValue. Per-frame
+    // updates to a sibling scalar on the Channel only invalidate views
+    // that read that one scalar — not views bound to bandGains, smoothing,
+    // floor, ceiling, etc.
 
     var isActive: Bool { enabled && target != .none && bandGains.contains(where: { $0 > 0.01 }) }
 }
@@ -69,11 +72,29 @@ final class Channel: Identifiable {
     // PIP positioning
     var pipSettings = PIPSettings()
 
+    // Source framing — rotation override + how the source aspect maps
+    // into the 1920x1080 program canvas. Default to .auto rotation (camera
+    // frames already track device orientation) and .fit (letterbox) so
+    // portrait sources don't get stretched horizontally.
+    var rotation: ChannelRotation = .auto
+    // Default to .fill so a portrait camera (or any non-16:9 source) crops
+    // to fill the program canvas instead of letterboxing — that's the
+    // behavior most VJ rigs want by default.
+    var fitMode: ChannelFitMode = .fill
+
     // Audio reactivity
     var audioReact = AudioReactSettings()
 
     // Audio visualizer params (only used when source is .audioVisualizer)
     var visualizerParams = VisualizerParams()
+
+    /// Per-frame computed values, hoisted out of their owning structs so
+    /// 60Hz writes don't invalidate every view bound to any field of
+    /// `lfo` / `audioReact`. Reads still come from the same Channel
+    /// observation root, but only views that read these specific scalars
+    /// rebuild when they change.
+    var lfoCurrent: Float = 0.5
+    var audioReactCurrent: Float = 0
 
     init(id: Int) {
         self.id = id

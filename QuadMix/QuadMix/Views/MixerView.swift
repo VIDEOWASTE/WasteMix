@@ -33,12 +33,6 @@ struct MixerView: View {
     @Environment(\.openWindow) private var openWindow
 
     private let R = Color(red: 1.0, green: 0.15, blue: 0.15)
-    private let cc: [Color] = [
-        Color(red: 1.0, green: 0.15, blue: 0.15),
-        Color(red: 1.0, green: 0.15, blue: 0.15),
-        Color(red: 1.0, green: 0.15, blue: 0.15),
-        Color(red: 1.0, green: 0.15, blue: 0.15),
-    ]
 
     var body: some View {
         GeometryReader { geo in
@@ -185,12 +179,12 @@ struct MixerView: View {
     private var panelContent: some View {
         switch activePanel {
         case .fxParams(let i):
-            FXParamsPanel(channel: mixerState.channels[i], color: cc[i], bpm: mixerState.bpm)
+            FXParamsPanel(channel: mixerState.channels[i], color: R, bpm: mixerState.bpm)
         case .color(let i):
             ColorCorrectionView(title: "CH\(i+1) Color",
                 correction: Binding(get: { mixerState.channels[i].colorCorrection }, set: { mixerState.channels[i].colorCorrection = $0 }))
         case .audio(let i):
-            AudioReactView(channel: mixerState.channels[i], audioEngine: renderEngine.audioEngine, accentColor: cc[i])
+            AudioReactView(channel: mixerState.channels[i], audioEngine: renderEngine.audioEngine, accentColor: R)
         case .globalColor:
             ColorCorrectionView(title: "Global Color",
                 correction: Binding(get: { mixerState.globalColorCorrection }, set: { mixerState.globalColorCorrection = $0 }))
@@ -293,7 +287,7 @@ struct MixerView: View {
     private func channelCell(_ i: Int) -> some View {
         let ch = mixerState.channels[i]
         let sel = mixerState.selectedPreviewChannel == i
-        let c = cc[i]
+        let c = R
 
         return VStack(spacing: 0) {
             // Header — fatter colored top bar when this channel is the
@@ -532,7 +526,7 @@ struct MixerView: View {
                                 Text("MASTER LFO").font(.system(size: 9, weight: .black, design: .monospaced)).tracking(0.5)
                                 Spacer()
                                 if mlOn {
-                                    Text("\(Int(mixerState.masterLFO.currentValue * 100))%")
+                                    Text("\(Int(mixerState.masterLFOCurrent * 100))%")
                                         .font(.system(size: 8, weight: .heavy, design: .monospaced))
                                 }
                             }
@@ -734,10 +728,10 @@ struct MixerView: View {
             Text("\(i+1)").font(.system(size: 10, weight: .black, design: .monospaced))
                 .foregroundColor(selected ? .white : .gray)
                 .frame(maxWidth: .infinity).padding(.vertical, 5)
-                .background(selected ? cc[i].opacity(0.35) : Color.white.opacity(0.03))
+                .background(selected ? R.opacity(0.35) : Color.white.opacity(0.03))
                 .overlay(
                     VStack(spacing: 0) {
-                        Rectangle().fill(selected ? cc[i] : Color.clear).frame(height: 2)
+                        Rectangle().fill(selected ? R : Color.clear).frame(height: 2)
                         Spacer()
                     }
                 )
@@ -952,6 +946,68 @@ struct FXParamsPanel: View {
                     }
                 }
 
+                // Framing — only relevant when the source is a camera, since
+                // device-orientation tracking is what drives the rotation
+                // need. Other source types come in at the resolution they
+                // were authored at.
+                if case .camera = channel.source {
+                Divider()
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("FRAMING")
+                            .font(.system(size: 11, weight: .black, design: .monospaced))
+                            .foregroundColor(.gray)
+                        Spacer()
+                        if channel.rotation != .auto || channel.fitMode != .fit {
+                            Button("Reset") {
+                                channel.rotation = .auto
+                                channel.fitMode = .fit
+                            }
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(R)
+                        }
+                    }
+
+                    Text("ROTATION")
+                        .font(.system(size: 9, weight: .black, design: .monospaced))
+                        .foregroundColor(.gray.opacity(0.6))
+                    Picker("Rotation", selection: Binding(
+                        get: { channel.rotation },
+                        set: { channel.rotation = $0; Haptics.tap() }
+                    )) {
+                        ForEach(ChannelRotation.allCases) { r in
+                            Text(r.displayName).tag(r)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Text("ASPECT")
+                        .font(.system(size: 9, weight: .black, design: .monospaced))
+                        .foregroundColor(.gray.opacity(0.6))
+                        .padding(.top, 2)
+                    Picker("Fit", selection: Binding(
+                        get: { channel.fitMode },
+                        set: { channel.fitMode = $0; Haptics.tap() }
+                    )) {
+                        ForEach(ChannelFitMode.allCases) { m in
+                            Text(m.displayName).tag(m)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Text({
+                        switch channel.fitMode {
+                        case .fit: return "Letterbox — preserve aspect, black bars on the short side."
+                        case .fill: return "Crop — preserve aspect, fill the canvas (edges trimmed)."
+                        case .stretch: return "Stretch — distort to fill exactly. No bars, no crop."
+                        }
+                    }())
+                    .font(.system(size: 9))
+                    .foregroundColor(.gray)
+                }
+                } // end of `if case .camera`
+
                 Divider()
 
                 // PIP
@@ -961,11 +1017,12 @@ struct FXParamsPanel: View {
                             .font(.system(size: 11, weight: .black, design: .monospaced))
                             .foregroundColor(.gray)
                         Spacer()
-                        if !channel.pipSettings.isDefault {
-                            Button("Reset") { channel.pipSettings.reset() }
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundColor(R)
+                        Button("Reset") {
+                            channel.pipSettings.reset()
+                            Haptics.tap()
                         }
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(channel.pipSettings.isDefault ? .gray.opacity(0.5) : R)
                     }
 
                     CorrectionSlider(label: "SCALE", value: Binding(
@@ -982,6 +1039,11 @@ struct FXParamsPanel: View {
                         get: { channel.pipSettings.offsetY },
                         set: { channel.pipSettings.offsetY = $0 }
                     ), range: -1...1, tint: R)
+
+                    CorrectionSlider(label: "ROTATE", value: Binding(
+                        get: { channel.pipSettings.rotation },
+                        set: { channel.pipSettings.rotation = $0 }
+                    ), range: -180...180, format: "%.0f°", tint: R)
                 }
             }
             .padding()

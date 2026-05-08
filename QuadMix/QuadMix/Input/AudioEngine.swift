@@ -35,7 +35,44 @@ final class AudioEngine {
     /// Overall level (RMS)
     private(set) var level: Float = 0
 
+    /// Consistent snapshot of all bands + spectrum, captured under a lock.
+    /// Readers that need a single coherent set (e.g. AudioVisualizerSource
+    /// composing LOW/MID/HIGH/FULL bands in one frame) should use this
+    /// instead of reading seven properties sequentially — those reads can
+    /// otherwise straddle a writer update from the audio thread, mixing
+    /// frame-N's bass with frame-N+1's high.
+    struct BandSnapshot {
+        var subBass: Float = 0
+        var bass: Float = 0
+        var lowMid: Float = 0
+        var mid: Float = 0
+        var highMid: Float = 0
+        var high: Float = 0
+        var brilliance: Float = 0
+        var level: Float = 0
+        var spectrum: [Float] = []
+    }
+    @ObservationIgnored private let snapshotLock = NSLock()
+    @ObservationIgnored private var _snapshot = BandSnapshot()
+
+    func snapshot() -> BandSnapshot {
+        snapshotLock.lock(); defer { snapshotLock.unlock() }
+        return _snapshot
+    }
+
     private(set) var isRunning = false
+
+    /// Why the audio engine isn't producing data — surfaced to the UI so
+    /// AudioReact / Visualizer panels can show "Mic permission needed"
+    /// or "No input format" instead of silently outputting zeros.
+    enum InputState {
+        case idle               // not yet started
+        case running            // capturing successfully
+        case permissionDenied   // user said no
+        case noInputFormat      // sampleRate=0 / no mic hardware on this Mac
+        case startFailed        // engine.start() threw
+    }
+    private(set) var inputState: InputState = .idle
 
     init() {
         fftSetup = vDSP_DFT_zop_CreateSetup(nil, vDSP_Length(fftSize), .FORWARD)
@@ -56,32 +93,77 @@ final class AudioEngine {
     }
 
     func start() {
+        NSLog("[AudioEngine] start() called, isRunning=%d", isRunning ? 1 : 0)
         guard !isRunning else { return }
 
-        // Just start — permission is handled by the system dialog automatically
-        // on Mac Catalyst when we access the input node
-        startEngine()
+        let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        NSLog("[AudioEngine] mic auth status = %d", micStatus.rawValue)
+        switch micStatus {
+        case .denied, .restricted:
+            // User said no — surface to the UI; don't try to start, that
+            // produces sampleRate=0 and the engine spins on silence.
+            NSLog("[AudioEngine] Permission DENIED/RESTRICTED — bailing")
+            inputState = .permissionDenied
+            return
+        case .authorized:
+            NSLog("[AudioEngine] Authorized; calling startEngine")
+            startEngine()
+        case .notDetermined:
+            // First launch: explicitly request access. On iOS,
+            // AVAudioEngine.inputNode triggers the prompt on its own; on
+            // macOS/Catalyst it doesn't, so the engine starts with no
+            // input bound and `inputFormat` returns sampleRate=0
+            // (CoreAudio AUIOBase Initialize error -50). Calling
+            // requestAccess explicitly drives the TCC prompt and only
+            // then do we touch the engine.
+            AVCaptureDevice.requestAccess(for: .audio) { [weak self] granted in
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    if granted {
+                        self.startEngine()
+                    } else {
+                        self.inputState = .permissionDenied
+                    }
+                }
+            }
+        @unknown default:
+            startEngine()
+        }
     }
 
     private static var didConfigureAudioSession = false
 
     private func startEngine() {
-        #if !targetEnvironment(macCatalyst)
         // Configure the shared audio session ONCE at first start. Re-running
         // setCategory after the AVCaptureSession has the camera active fires
         // an audio session interruption that takes the camera down — so do
         // it lazily and only once per process.
+        //
+        // This used to be gated `#if !targetEnvironment(macCatalyst)` on the
+        // theory that AVAudioSession is iOS-only. It isn't — Catalyst does
+        // ship AVAudioSession, and without setCategory(.playAndRecord) the
+        // engine starts up with no input route bound, producing
+        // `inputFormat(forBus:0).sampleRate == 0` and a CoreAudio
+        // `AUIOBase Initialize error=-50` (kAudio_ParamError). Calling
+        // setCategory tells CoreAudio to wire the default input device
+        // into the engine on Mac the same way it does on iPad.
         if !Self.didConfigureAudioSession {
             let session = AVAudioSession.sharedInstance()
             do {
+                #if targetEnvironment(macCatalyst)
+                // .defaultToSpeaker isn't valid on Mac, and .mixWithOthers
+                // is the default behavior. Just .playAndRecord is enough
+                // to wire up the input route.
+                try session.setCategory(.playAndRecord)
+                #else
                 try session.setCategory(.playAndRecord, options: [.defaultToSpeaker, .mixWithOthers])
+                #endif
                 try session.setActive(true)
                 Self.didConfigureAudioSession = true
             } catch {
                 NSLog("[AudioEngine] Audio session error: %@", error.localizedDescription)
             }
         }
-        #endif
 
         engine = AVAudioEngine()
         guard let engine = engine else { return }
@@ -98,6 +180,7 @@ final class AudioEngine {
 
         guard format.sampleRate > 0 && format.channelCount > 0 else {
             NSLog("[AudioEngine] No valid audio input format available")
+            inputState = .noInputFormat
             return
         }
 
@@ -113,6 +196,7 @@ final class AudioEngine {
         do {
             try engine.start()
             isRunning = true
+            inputState = .running
             NSLog("[AudioEngine] Started OK, sr=%.0f", format.sampleRate)
         } catch {
             NSLog("[AudioEngine] Start failed: %@", error.localizedDescription)
@@ -125,10 +209,12 @@ final class AudioEngine {
             do {
                 try engine.start()
                 isRunning = true
+                inputState = .running
                 NSLog("[AudioEngine] Started OK on retry")
             } catch {
                 NSLog("[AudioEngine] Retry failed: %@", error.localizedDescription)
                 isRunning = false
+                inputState = .startFailed
             }
         }
     }
@@ -138,6 +224,7 @@ final class AudioEngine {
         engine?.stop()
         engine = nil
         isRunning = false
+        inputState = .idle
     }
 
     private func processBuffer(_ buffer: AVAudioPCMBuffer, sampleRate: Float, halfFFT: Int) {
@@ -229,6 +316,16 @@ final class AudioEngine {
         let newHigh = bandLevel(low: 4000, high: 8000)
         let newBrilliance = bandLevel(low: 8000, high: 20000)
         let newSpectrum = magnitudes
+
+        // Atomic snapshot first — covers any reader that needs a coherent
+        // set of bands+spectrum from one audio frame (no torn read).
+        snapshotLock.lock()
+        _snapshot = BandSnapshot(
+            subBass: newSubBass, bass: newBass, lowMid: newLowMid,
+            mid: newMid, highMid: newHighMid, high: newHigh,
+            brilliance: newBrilliance, level: newLevel, spectrum: newSpectrum
+        )
+        snapshotLock.unlock()
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }

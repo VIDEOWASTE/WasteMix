@@ -4,6 +4,13 @@ import QuartzCore
 final class ChannelRenderer {
     let channel: Channel
     private let ctx = MetalContext.shared
+    /// Session-relative time origin. CACurrentMediaTime() is mach_absolute
+    /// seconds since boot; on a Mac that's been up for weeks, casting to
+    /// Float32 loses sub-millisecond precision and per-frame strobe / feedback
+    /// shaders judder. Subtracting this baseline before the cast keeps shader
+    /// `time` in a small range with full precision.
+    private static let timeOrigin: CFTimeInterval = CACurrentMediaTime()
+    private static var sessionTime: Float { Float(CACurrentMediaTime() - timeOrigin) }
     /// When the source is cleared (set to nil), drop the cached last
     /// source/freeze textures too — otherwise `currentTexture(...)` keeps
     /// reprocessing the stale frame and PVW shows the old image
@@ -27,6 +34,14 @@ final class ChannelRenderer {
     private var colorCorrectedTex: MTLTexture?
     private var effectOutputTex: MTLTexture?
     private var keyOutputTex: MTLTexture?
+    // Sized to the program canvas (1920x1080), not the source. The transform
+    // pass bakes rotation + letterbox/fill into this so the compositor can
+    // blend portrait phones, square NDI, etc. against any other layer
+    // without aspect-stretch.
+    private var transformOutputTex: MTLTexture?
+    // PIP runs as the final per-channel pass. Living here (rather than in
+    // the compositor) means PIP shows in PVW too, not just PGM.
+    private var pipOutputTex: MTLTexture?
 
     // Feedback effect: persistent buffer from previous frame
     private var feedbackTexA: MTLTexture?
@@ -82,6 +97,22 @@ final class ChannelRenderer {
         if channel.keySettings.isActive {
             if let keyed = applyKey(input: current, commandBuffer: commandBuffer) {
                 current = keyed
+            }
+        }
+
+        // 4. Source framing — rotation override + fit/fill onto the program
+        //    canvas. Always run; this is what stops portrait phones / square
+        //    NDI from being aspect-stretched into 1920x1080 by the compositor.
+        if let transformed = applyTransform(input: current, commandBuffer: commandBuffer) {
+            current = transformed
+        }
+
+        // 5. PIP — scale, offset, rotation. Skipped at default settings to
+        //    save a render pass. Running this here (instead of in the
+        //    compositor) means PIP changes show up in PVW too.
+        if !channel.pipSettings.isDefault {
+            if let pip = applyPIP(input: current, commandBuffer: commandBuffer) {
+                current = pip
             }
         }
 
@@ -149,7 +180,7 @@ final class ChannelRenderer {
         var params = EffectUniforms(
             param1: channel.effectIntensity,
             param2: channel.effectParam2,
-            time: Float(CACurrentMediaTime()),
+            time: Self.sessionTime,
             padding: 0
         )
         enc.setFragmentBytes(&params, length: MemoryLayout<EffectUniforms>.size, index: 0)
@@ -183,13 +214,76 @@ final class ChannelRenderer {
         var params = EffectUniforms(
             param1: channel.effectIntensity,
             param2: channel.effectParam2,
-            time: Float(CACurrentMediaTime()),
+            time: Self.sessionTime,
             padding: 0
         )
         enc.setFragmentBytes(&params, length: MemoryLayout<EffectUniforms>.size, index: 0)
         enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
         enc.endEncoding()
         return writeTex
+    }
+
+    private func applyPIP(input: MTLTexture, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        pipOutputTex = ensureTexture(pipOutputTex, matching: input)
+        guard let out = pipOutputTex else { return nil }
+
+        let desc = MTLRenderPassDescriptor()
+        desc.colorAttachments[0].texture = out
+        desc.colorAttachments[0].loadAction = .clear
+        desc.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
+        desc.colorAttachments[0].storeAction = .store
+
+        guard let enc = commandBuffer.makeRenderCommandEncoder(descriptor: desc) else { return nil }
+        enc.setRenderPipelineState(ctx.pipPipeline)
+        enc.setVertexBuffer(ctx.quadVertexBuffer, offset: 0, index: 0)
+        enc.setFragmentTexture(input, index: 0)
+
+        var u = PIPUniforms(
+            scale: channel.pipSettings.scale,
+            offsetX: channel.pipSettings.offsetX,
+            offsetY: channel.pipSettings.offsetY,
+            opacity: 1.0,
+            rotationRadians: channel.pipSettings.rotation * .pi / 180.0,
+            targetAspect: Float(input.width) / Float(input.height)
+        )
+        enc.setFragmentBytes(&u, length: MemoryLayout<PIPUniforms>.size, index: 0)
+        enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+        enc.endEncoding()
+        return out
+    }
+
+    private func applyTransform(input: MTLTexture, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        let targetW = Constants.defaultWidth
+        let targetH = Constants.defaultHeight
+
+        if transformOutputTex == nil ||
+           transformOutputTex!.width != targetW ||
+           transformOutputTex!.height != targetH {
+            transformOutputTex = ctx.makeTexture(width: targetW, height: targetH)
+        }
+        guard let out = transformOutputTex else { return nil }
+
+        let desc = MTLRenderPassDescriptor()
+        desc.colorAttachments[0].texture = out
+        desc.colorAttachments[0].loadAction = .clear
+        desc.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 1)
+        desc.colorAttachments[0].storeAction = .store
+
+        guard let enc = commandBuffer.makeRenderCommandEncoder(descriptor: desc) else { return nil }
+        enc.setRenderPipelineState(ctx.transformPipeline)
+        enc.setVertexBuffer(ctx.quadVertexBuffer, offset: 0, index: 0)
+        enc.setFragmentTexture(input, index: 0)
+
+        var u = TransformUniforms(
+            rotationRadians: channel.rotation.radians,
+            sourceAspect: Float(input.width) / Float(input.height),
+            targetAspect: Float(targetW) / Float(targetH),
+            fillMode: channel.fitMode.shaderValue
+        )
+        enc.setFragmentBytes(&u, length: MemoryLayout<TransformUniforms>.size, index: 0)
+        enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+        enc.endEncoding()
+        return out
     }
 
     private func applyKey(input: MTLTexture, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
@@ -217,7 +311,9 @@ final class ChannelRenderer {
             param1: channel.keySettings.threshold,
             param2: channel.keySettings.softness,
             time: channel.keySettings.keyHue,
-            padding: 0
+            // Repurposed `padding` slot — carries the invert flag for the
+            // luma + chroma key shaders. Other effect shaders ignore it.
+            padding: channel.keySettings.invert ? 1 : 0
         )
         enc.setFragmentBytes(&params, length: MemoryLayout<EffectUniforms>.size, index: 0)
         enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
@@ -244,6 +340,13 @@ final class ChannelRenderer {
         blit.endEncoding()
         return dst
     }
+}
+
+struct TransformUniforms {
+    var rotationRadians: Float
+    var sourceAspect: Float
+    var targetAspect: Float
+    var fillMode: Int32  // 0 = fit (letterbox), 1 = fill (crop)
 }
 
 struct ColorCorrectionUniforms {

@@ -10,6 +10,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ---
 
+## [0.0.6] — 2026-05-08
+
+iPad camera framing & PIP overhaul. Camera frames now follow device orientation (landscape↔portrait) live via `RotationCoordinator`, dropping the static 180° iPad-TrueDepth workaround. Per-channel rotation override + Fit / Fill / Stretch aspect modes for non-16:9 sources, with PIP rotation as a new parameter. PIP now applies inside the per-channel pipeline so all changes show in PVW, not just PGM.
+
+### Added
+- **Live camera rotation tracking** — `CameraHub` installs an `AVCaptureDevice.RotationCoordinator` per camera position and KVO-observes `videoRotationAngleForHorizonLevelCapture`, writing the live angle to the connection. Frames stay upright when the iPad rotates.
+- **Per-channel framing override** (`FRAMING` section in FX PARAMS panel, camera sources only):
+  - `ROTATION` — Auto / 0° / 90° / 180° / 270° override on top of the auto-tracked angle.
+  - `ASPECT` — Fit (letterbox), Fill (crop edges, default for new channels), Stretch (distort to fill).
+  - New `fragment_transform` Metal pass running at the tail of `ChannelRenderer.currentTexture()` produces program-canvas-sized (1920×1080) output per channel, ending the implicit aspect-stretch the compositor used to do.
+- **PIP rotation slider** — `ROTATE` in the `PIP / POSITION` section, range -180°…+180°. Aspect-correct so a square PIP stays square when rotated. Works at any scale (PIP shrink, fullscreen, overscan).
+
+### Changed
+- **PIP applied per channel, not in the compositor** — the PIP render pass moved from `CompositorPipeline.applyPIPIfNeeded` into `ChannelRenderer.applyPIP`, so PIP scale/offset/rotation now show up in PVW and not just PGM. `ChannelCompositeInfo.pipSettings` removed.
+- **`PIP / POSITION` reset is always visible**, greys out when settings are at default.
+- **Default channel `fitMode` is now `.fill`** (was `.fit`) — portrait cameras crop to fill the canvas instead of letterboxing by default.
+
+### Fixed
+- iPad TrueDepth front camera is no longer hard-coded to a 180° flip; the rotation coordinator gives the correct angle for each device + orientation.
+
+---
+
 ## [0.0.5] — 2026-05-07
 
 Audio Visualizer source + LZX-style 4-band envelope reactivity system. 13 visualizer styles with proper neon-on-black bloom, Tunnel rebuilt as a 3D polygon corridor, new Geometry (3D solids) variant, single-band routing so any band drives the whole visualizer.

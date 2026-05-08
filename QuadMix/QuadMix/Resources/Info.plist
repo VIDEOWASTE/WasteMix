@@ -6,6 +6,8 @@
     <string>WasteMix</string>
     <key>NSCameraUsageDescription</key>
     <string>WasteMix needs camera access to use the iPad camera as a video source for mixing.</string>
+    <key>NSCameraUseContinuityCameraDeviceType</key>
+    <true/>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>WasteMix needs access to your photo library to import videos and images as mixing sources.</string>
     <key>NSMicrophoneUsageDescription</key>

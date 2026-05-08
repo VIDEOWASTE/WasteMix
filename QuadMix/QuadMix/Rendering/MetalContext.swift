@@ -13,11 +13,11 @@ final class MetalContext {
     // Pipeline states
     let passthroughPipeline: MTLRenderPipelineState
     let passthroughOpacityPipeline: MTLRenderPipelineState
+    let transformPipeline: MTLRenderPipelineState
     let pipPipeline: MTLRenderPipelineState
     let colorCorrectionPipeline: MTLRenderPipelineState
     let wipePipeline: MTLRenderPipelineState
     let wipeABPipeline: MTLRenderPipelineState
-    let dipPipeline: MTLRenderPipelineState
     var blendPipelines: [ChannelBlendMode: MTLRenderPipelineState] = [:]
     var effectPipelines: [String: MTLRenderPipelineState] = [:]
     let lumaKeyPipeline: MTLRenderPipelineState
@@ -96,6 +96,13 @@ final class MetalContext {
             fragmentName: "fragment_passthrough_opacity"
         )
 
+        // Source framing: rotation + fit/fill into program canvas
+        self.transformPipeline = Self.makePipeline(
+            device: device, library: library,
+            vertexFunction: vertexFunc,
+            fragmentName: "fragment_transform"
+        )
+
         // PIP pipeline (alpha blending enabled so transparent pixels show through)
         self.pipPipeline = Self.makeBlendPipeline(
             device: device, library: library,
@@ -120,13 +127,6 @@ final class MetalContext {
             device: device, library: library,
             vertexFunction: vertexFunc,
             fragmentName: "transition_wipe_ab"
-        )
-
-        // Dip transition pipeline
-        self.dipPipeline = Self.makePipeline(
-            device: device, library: library,
-            vertexFunction: vertexFunc,
-            fragmentName: "transition_dip"
         )
 
         // Blend mode pipelines

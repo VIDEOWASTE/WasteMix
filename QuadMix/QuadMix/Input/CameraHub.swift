@@ -22,6 +22,14 @@ final class CameraHub: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     private var consumers: [AVCaptureDevice.Position: NSHashTable<CameraSource>] = [:]
     private var latestBuffers: [AVCaptureDevice.Position: CVPixelBuffer] = [:]
 
+    // Live rotation tracking. RotationCoordinator emits a horizon-level angle
+    // that updates as the device rotates (landscape↔portrait), and we KVO it
+    // to keep `connection.videoRotationAngle` in sync. Without this the camera
+    // is locked to whatever orientation the device was in at attach time.
+    private var rotationCoordinators: [AVCaptureDevice.Position: Any] = [:]
+    private var rotationObservations: [AVCaptureDevice.Position: NSKeyValueObservation] = [:]
+
+
     override init() {
         if AVCaptureMultiCamSession.isMultiCamSupported {
             session = AVCaptureMultiCamSession()
@@ -100,6 +108,9 @@ final class CameraHub: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
             outputs.removeValue(forKey: position)
         }
         session.commitConfiguration()
+        rotationObservations[position]?.invalidate()
+        rotationObservations.removeValue(forKey: position)
+        rotationCoordinators.removeValue(forKey: position)
     }
 
     func latestBuffer(for position: AVCaptureDevice.Position) -> CVPixelBuffer? {
@@ -130,7 +141,7 @@ final class CameraHub: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     private func attachInputIfNeeded(position: AVCaptureDevice.Position) {
         if inputs[position] != nil { return }
 
-        let allDeviceTypes: [AVCaptureDevice.DeviceType] = [
+        var allDeviceTypes: [AVCaptureDevice.DeviceType] = [
             .builtInWideAngleCamera,
             .builtInUltraWideCamera,
             .builtInTelephotoCamera,
@@ -139,16 +150,39 @@ final class CameraHub: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
             .builtInTrueDepthCamera,
             .external
         ]
+        // Continuity Camera (iPhone-as-webcam) on Catalyst / macOS. Type
+        // is unavailable on iOS proper, so it's gated by availability.
+        if #available(macCatalyst 17.0, iOS 17.0, *) {
+            allDeviceTypes.append(.continuityCamera)
+        }
+
         let discovered = AVCaptureDevice.DiscoverySession(
             deviceTypes: allDeviceTypes,
             mediaType: .video,
             position: position
         ).devices
 
-        // Prefer a format that explicitly supports multi-cam if we're using it.
-        guard let device = discovered.first ?? AVCaptureDevice.DiscoverySession(
-            deviceTypes: allDeviceTypes, mediaType: .video, position: .unspecified
-        ).devices.first(where: { $0.position == position }) else {
+        // On Mac Catalyst, almost all webcams (Studio Display, USB UVC,
+        // Continuity Camera) report position `.unspecified` because the
+        // front/back metaphor is iPad/iPhone-specific. Filtering by
+        // position would reject every device. We instead grab the first
+        // camera we can find — the user's "front vs back" channel choice
+        // becomes a no-op on Mac, but at least the channel gets video.
+        let device: AVCaptureDevice? = {
+            if let d = discovered.first { return d }
+            #if targetEnvironment(macCatalyst)
+            // Mac fallback: take any camera, regardless of position.
+            return AVCaptureDevice.DiscoverySession(
+                deviceTypes: allDeviceTypes, mediaType: .video, position: .unspecified
+            ).devices.first
+            #else
+            return AVCaptureDevice.DiscoverySession(
+                deviceTypes: allDeviceTypes, mediaType: .video, position: .unspecified
+            ).devices.first(where: { $0.position == position })
+            #endif
+        }()
+
+        guard let device = device else {
             NSLog("[CameraHub] no device for position=%d", position.rawValue)
             return
         }
@@ -198,21 +232,66 @@ final class CameraHub: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         session.addOutput(output)
 
         if let conn = output.connection(with: .video) {
-            // iPad front camera (TrueDepth) delivers landscape-iPad frames
-            // upside-down by default. 180° brings it right-side-up.
-            // Back camera is already correctly oriented at 0°.
-            let angle: CGFloat = (position == .front) ? 180 : 0
-            if conn.isVideoRotationAngleSupported(angle) {
-                conn.videoRotationAngle = angle
-            } else if conn.isVideoRotationAngleSupported(0) {
-                conn.videoRotationAngle = 0
+            // Selfie-style mirroring on front cam — what users expect from
+            // a VJ feed of themselves (raise your right hand → it appears
+            // on screen-right). Back cam stays unmirrored.
+            if position == .front, conn.isVideoMirroringSupported {
+                conn.automaticallyAdjustsVideoMirroring = false
+                conn.isVideoMirrored = true
             }
+
+            installRotationTracking(for: device, position: position, connection: conn)
         }
         session.commitConfiguration()
 
         inputs[position] = input
         outputs[position] = output
         NSLog("[CameraHub] attached %@ pos=%d type=%@", device.localizedName, position.rawValue, device.deviceType.rawValue)
+    }
+
+    /// Wire `connection.videoRotationAngle` to the device's live horizon-level
+    /// capture angle. The coordinator pushes new values via KVO whenever the
+    /// device rotates (landscape↔portrait), so frames stay upright without
+    /// re-attaching the input.
+    ///
+    /// On platforms / OS versions without `RotationCoordinator` (Catalyst
+    /// pre-17, etc.) we fall back to a static 0° angle — the prior 180°
+    /// iPad-TrueDepth hack is gone; the coordinator gives the correct value.
+    private func installRotationTracking(for device: AVCaptureDevice,
+                                         position: AVCaptureDevice.Position,
+                                         connection: AVCaptureConnection) {
+        let initial: CGFloat
+        if #available(iOS 17.0, macCatalyst 17.0, macOS 14.0, *) {
+            let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: nil)
+            initial = coordinator.videoRotationAngleForHorizonLevelCapture
+            rotationCoordinators[position] = coordinator
+            // KVO lets us follow device rotation without re-attaching inputs.
+            // Capture `position` weakly via a closure; the observation is
+            // retained in `rotationObservations` for lifetime.
+            let obs = coordinator.observe(\.videoRotationAngleForHorizonLevelCapture, options: [.new]) { [weak self] _, change in
+                guard let self = self, let angle = change.newValue else { return }
+                self.queue.async { [weak self] in
+                    guard let self = self,
+                          let out = self.outputs[position],
+                          let conn = out.connection(with: .video) else { return }
+                    if conn.isVideoRotationAngleSupported(angle) {
+                        conn.videoRotationAngle = angle
+                    }
+                }
+            }
+            rotationObservations[position] = obs
+        } else {
+            initial = 0
+        }
+
+        if connection.isVideoRotationAngleSupported(initial) {
+            connection.videoRotationAngle = initial
+        } else if connection.isVideoRotationAngleSupported(0) {
+            connection.videoRotationAngle = 0
+        }
+        NSLog("[CameraHub] pos=%d type=%@ rotation=%.0f° mirrored=%d (coordinator-tracked)",
+              position.rawValue, device.deviceType.rawValue, Double(initial),
+              connection.isVideoMirrored ? 1 : 0)
     }
 
     // MARK: - Sample buffer delegate

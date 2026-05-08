@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Network access for NDI broadcast / receive on iOS + Mac Catalyst.
+         Multicast entitlement is intentionally omitted because it
+         requires Apple Developer account approval (gated capability).
+         Catalyst Bonjour browse via mDNS works with just client+server
+         + the NSBonjourServices Info.plist declaration. -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.network.server</key>
+    <true/>
+    <!-- Camera + microphone access on Catalyst when the app is sandboxed.
+         The user-facing prompt strings still come from Info.plist
+         (NSCameraUsageDescription / NSMicrophoneUsageDescription); these
+         entitlements are what tcc actually checks against on macOS. -->
+    <key>com.apple.security.device.camera</key>
+    <true/>
+    <key>com.apple.security.device.microphone</key>
+    <true/>
+</dict>
+</plist>

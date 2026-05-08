@@ -39,6 +39,19 @@ struct PIPUniforms {
     float offsetX;
     float offsetY;
     float opacity;
+    float rotationRadians;
+    float targetAspect;
+    float padding0;
+    float padding1;
+};
+
+// Per-channel source-framing transform. Sized so the source's apparent
+// rectangle fits or fills the target canvas after rotation.
+struct TransformUniforms {
+    float rotationRadians;  // 0, π/2, π, 3π/2 — set by ChannelRotation
+    float sourceAspect;     // source.w / source.h
+    float targetAspect;     // target.w / target.h
+    int fillMode;           // 0 = fit (letterbox), 1 = fill (crop edges)
 };
 
 #endif

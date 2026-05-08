@@ -23,6 +23,19 @@ struct AudioReactView: View {
                 .tint(accentColor)
             }
 
+            // Surface mic-input problems explicitly. Without this, audio
+            // react silently produces zeros when permission is denied or
+            // the host has no input — looks like an app bug.
+            if let warning = micWarning {
+                Text(warning)
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.orange)
+                    .padding(6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.orange.opacity(0.12))
+                    .cornerRadius(4)
+            }
+
             if channel.audioReact.enabled {
                 // Target picker
                 VStack(alignment: .leading, spacing: 3) {
@@ -87,11 +100,11 @@ struct AudioReactView: View {
                             ZStack(alignment: .leading) {
                                 Rectangle().fill(Color.white.opacity(0.8))
                                 Rectangle().fill(accentColor)
-                                    .frame(width: geo.size.width * CGFloat(channel.audioReact.currentValue))
+                                    .frame(width: geo.size.width * CGFloat(channel.audioReactCurrent))
                             }
                         }
                         .frame(height: 8)
-                        Text("\(Int(channel.audioReact.currentValue * 100))%")
+                        Text("\(Int(channel.audioReactCurrent * 100))%")
                             .font(.system(size: 8, weight: .bold, design: .monospaced))
                             .foregroundColor(.white.opacity(0.8))
                             .frame(width: 30)
@@ -209,5 +222,25 @@ struct AudioReactView: View {
             channel.audioReact.bandGains[i] = gains[i]
         }
         Haptics.tap()
+    }
+
+    /// Human-readable warning for the input state — returns nil when audio
+    /// is healthy. Phrasing differs slightly per-platform: iPad users open
+    /// Settings, Mac users open System Settings ▸ Privacy & Security.
+    private var micWarning: String? {
+        switch audioEngine.inputState {
+        case .running, .idle:
+            return nil
+        case .permissionDenied:
+            #if targetEnvironment(macCatalyst)
+            return "MIC ACCESS DENIED — System Settings ▸ Privacy & Security ▸ Microphone"
+            #else
+            return "MIC ACCESS DENIED — Settings ▸ WasteMix ▸ Microphone"
+            #endif
+        case .noInputFormat:
+            return "NO AUDIO INPUT FOUND — connect a mic / interface"
+        case .startFailed:
+            return "AUDIO ENGINE FAILED TO START"
+        }
     }
 }

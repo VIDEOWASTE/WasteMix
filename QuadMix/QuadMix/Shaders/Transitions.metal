@@ -57,19 +57,31 @@ inline float wipeMask(float2 uv, float progress, int direction) {
         float angle = atan2(d.y, d.x) + M_PI_F / 2.0 + 20.0 * M_PI_F / 180.0;
         float radius = length(d);
 
-        // Star shape in polar coords
+        // Star shape in polar coords. Within each wedge of half-width
+        // `wedge = π/5`, the star edge is the straight segment from the
+        // apex at (outerR, 0) to the valley at (innerR·cos(wedge),
+        // innerR·sin(wedge)). The radial distance to that segment at
+        // polar angle `a` (measured from the apex axis) follows from the
+        // line's polar equation, giving:
+        //   r(a) = (innerR·sin(wedge))
+        //        / (innerR·sin(wedge)·cos(a) + (outerR − innerR·cos(wedge))·sin|a|)
+        // r(0) = outerR (apex), r(±wedge) = innerR (valley) — both verified.
         float wedge = M_PI_F / 5.0;
         float a = fmod(angle + 20.0 * M_PI_F, 2.0 * wedge) - wedge;
+        float aAbs = abs(a);
         float outerR = 1.0;
         float innerR = 0.38;
-        float starR = (outerR * innerR) / (innerR * cos(a) + outerR * sin(abs(a)));
+        float sinW = sin(wedge);
+        float cosW = cos(wedge);
+        float denom = innerR * sinW * cos(a) + (outerR - innerR * cosW) * sin(aAbs);
+        float starR = (innerR * sinW) / max(denom, 1e-6);
 
         // Distance along star shape, normalized so boundary = 1
         float starDist = radius / starR;
 
-        // The farthest corner is at 0.707 from center. The minimum starR (at valleys)
-        // is innerR = 0.38. So max starDist = 0.707 / 0.38 ≈ 1.86.
-        // Scale progress to cover full range: progress 0→1 maps to threshold 0→2.0
+        // The farthest corner is at 0.707 from center. The minimum starR
+        // (at valleys) is innerR = 0.38, so max starDist ≈ 1.86. Scale
+        // progress 0→1 to cover the full range, with a small overshoot.
         float threshold = progress * 2.0;
         mask = smoothstep(threshold - edge * 3.0, threshold + edge * 3.0, starDist);
         mask = 1.0 - mask; // invert: inside star = revealed
@@ -105,19 +117,3 @@ fragment float4 transition_wipe(VertexOut in [[stage_in]],
     return float4(color.rgb * mask, 1.0);
 }
 
-/// Dip to black transition
-fragment float4 transition_dip(VertexOut in [[stage_in]],
-                                texture2d<float> input [[texture(0)]],
-                                constant TransitionUniforms &u [[buffer(0)]]) {
-    constexpr sampler s(filter::linear, address::clamp_to_edge);
-    float4 color = input.sample(s, in.texCoord);
-
-    float fade;
-    if (u.progress < 0.5) {
-        fade = 1.0 - u.progress * 2.0;
-    } else {
-        fade = (u.progress - 0.5) * 2.0;
-    }
-
-    return float4(color.rgb * fade, color.a);
-}

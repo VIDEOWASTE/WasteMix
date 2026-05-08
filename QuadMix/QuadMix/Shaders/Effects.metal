@@ -192,9 +192,12 @@ fragment float4 effect_datamosh(VertexOut in [[stage_in]],
     // Shift: how far blocks displace horizontally
     float shift = p.param1 * 0.5;
 
-    // Use fract of time so the hash stays in a good float range
-    // Slow tick: changes a few times per second for that stuttery datamosh feel
-    float timeTick = floor(fract(p.time * 0.01) * 30.0);
+    // Stuttery datamosh tick — ~8 changes per second. The previous formula
+    // was `floor(fract(time * 0.01) * 30.0)` which made the tick change
+    // only every ~3.3s and repeat every 100s, so the glitch "froze" for
+    // long stretches. Wrapping by fmod keeps the hash inputs in a tight
+    // float range without losing variety.
+    float timeTick = floor(fmod(p.time * 8.0, 4096.0));
 
     // Which horizontal band are we in?
     float blockY = floor(uv.y / blockH);
@@ -254,27 +257,39 @@ fragment float4 effect_scanlines(VertexOut in [[stage_in]],
 }
 
 // MARK: - Kaleidoscope (param1 = segments, param2 = rotation)
+//
+// Metal's `fmod(a,b)` returns the sign of `a`; for negative input angles
+// that produces negative segment indices and inverted mirroring. Wrap with
+// a non-negative modulo helper instead of relying on the +100π offset.
+inline float wrapMod(float x, float m) {
+    float r = fmod(x, m);
+    return r < 0.0 ? r + m : r;
+}
+
 fragment float4 effect_kaleidoscope(VertexOut in [[stage_in]],
                                      texture2d<float> tex [[texture(0)]],
                                      constant EffectParams &p [[buffer(0)]]) {
     constexpr sampler s(filter::linear, address::clamp_to_edge);
 
     float2 uv = in.texCoord - 0.5;
-    float angle = atan2(uv.y, uv.x) + p.param2 * M_PI_F * 2.0;
+    float baseAngle = atan2(uv.y, uv.x);
+    float angle = baseAngle + p.param2 * M_PI_F * 2.0;
     float radius = length(uv);
 
     // Number of segments: 2-16
     float segments = floor(mix(2.0, 16.0, p.param1));
     float segAngle = M_PI_F * 2.0 / segments;
 
-    // Fold angle into one segment
-    angle = fmod(angle + 100.0 * M_PI_F, segAngle);
-    // Mirror alternating segments
-    if (fmod(floor((atan2(uv.y, uv.x) + 100.0 * M_PI_F) / segAngle), 2.0) > 0.5) {
-        angle = segAngle - angle;
+    // Fold angle into one segment using non-negative modulo.
+    float folded = wrapMod(angle, segAngle);
+    // Mirror alternating segments — index derived from the same wrapped
+    // base angle so the mirroring stays consistent regardless of rotation.
+    float segIndex = floor(wrapMod(angle, M_PI_F * 2.0) / segAngle);
+    if (fmod(segIndex, 2.0) > 0.5) {
+        folded = segAngle - folded;
     }
 
-    float2 kalUV = float2(cos(angle), sin(angle)) * radius + 0.5;
+    float2 kalUV = float2(cos(folded), sin(folded)) * radius + 0.5;
     kalUV = clamp(kalUV, float2(0.0), float2(1.0));
 
     return tex.sample(s, kalUV);
@@ -309,6 +324,11 @@ fragment float4 effect_halftone(VertexOut in [[stage_in]],
 }
 
 // MARK: - Luma Key
+//
+// param1 = threshold (0-1)
+// param2 = softness (half-width of the alpha falloff edge)
+// padding = invert flag (0 = key out blacks / keep brights;
+//                        1 = key out whites / keep darks)
 fragment float4 key_luma(VertexOut in [[stage_in]],
                           texture2d<float> tex [[texture(0)]],
                           constant EffectParams &p [[buffer(0)]]) {
@@ -316,6 +336,7 @@ fragment float4 key_luma(VertexOut in [[stage_in]],
     float4 c = tex.sample(s, in.texCoord);
     float luma = dot(c.rgb, float3(0.2126, 0.7152, 0.0722));
     float alpha = smoothstep(p.param1 - p.param2, p.param1 + p.param2, luma);
+    if (p.padding > 0.5) { alpha = 1.0 - alpha; }
     return float4(c.rgb, alpha);
 }
 
@@ -349,6 +370,9 @@ fragment float4 key_chroma(VertexOut in [[stage_in]],
     float mask = smoothstep(tolerance - soft, tolerance + soft, hueDiff);
     float satMask = smoothstep(0.1, 0.3, sat);
     float alpha = max(mask, 1.0 - satMask);
+    // padding > 0.5 means "invert": keep the keyed-out hue and knock out
+    // everything else. Same flag layout as the luma key.
+    if (p.padding > 0.5) { alpha = 1.0 - alpha; }
 
     return float4(c.rgb, alpha);
 }

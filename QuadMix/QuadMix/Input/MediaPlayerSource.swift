@@ -3,7 +3,6 @@ import CoreVideo
 
 final class MediaPlayerSource: FrameProvider {
     private let player: AVPlayer
-    private let playerItem: AVPlayerItem
     private let videoOutput: AVPlayerItemVideoOutput
     private var looper: AVPlayerLooper?
     private var queuePlayer: AVQueuePlayer?
@@ -13,7 +12,6 @@ final class MediaPlayerSource: FrameProvider {
 
     init(url: URL) {
         let asset = AVURLAsset(url: url)
-        self.playerItem = AVPlayerItem(asset: asset)
 
         let settings: [String: Any] = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,

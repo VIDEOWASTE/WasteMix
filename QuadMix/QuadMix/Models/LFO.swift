@@ -69,7 +69,7 @@ enum MasterLFOTarget: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-struct LFOSettings {
+struct LFOSettings: Codable {
     var enabled: Bool = false
     var shape: LFOShape = .sine
     var target: LFOTarget = .opacity
@@ -80,8 +80,9 @@ struct LFOSettings {
     var useBPM: Bool = false    // sync to tap tempo BPM
     var bpmDivision: Float = 1.0 // 0.25 = quarter, 1 = whole, 2 = double
 
-    /// Current LFO output value (0-1), updated each frame
-    var currentValue: Float = 0.5
+    // `currentValue` used to live here; it was moved to `Channel.lfoCurrent`
+    // (and `MixerState.masterLFOCurrent`) so per-frame updates don't
+    // invalidate every view bound to any field of LFOSettings.
 
     var isActive: Bool { enabled && target != .none }
 

@@ -17,6 +17,10 @@ final class MixerState {
     /// Master section LFO — drives the selected master target when enabled.
     var masterLFO = LFOSettings()
     var masterLFOTarget: MasterLFOTarget = .crossfader
+    /// Per-frame computed value of the master LFO, hoisted out of the
+    /// LFOSettings struct so writes don't invalidate every view bound to
+    /// any field of `masterLFO`.
+    var masterLFOCurrent: Float = 0.5
 
     /// Crossfader position 0..1. Lifted out of MixerView so the master LFO
     /// can sweep it automatically.

@@ -170,11 +170,11 @@ struct LFOView: View {
                         ZStack(alignment: .leading) {
                             Rectangle().fill(Color.white.opacity(0.06))
                             Rectangle().fill(R)
-                                .frame(width: geo.size.width * CGFloat(channel.lfo.currentValue))
+                                .frame(width: geo.size.width * CGFloat(channel.lfoCurrent))
                         }
                     }
                     .frame(height: 6)
-                    Text("\(Int(channel.lfo.currentValue * 100))%")
+                    Text("\(Int(channel.lfoCurrent * 100))%")
                         .font(.system(size: 8, weight: .bold, design: .monospaced))
                         .foregroundColor(.white.opacity(0.8))
                         .frame(width: 30)
@@ -304,11 +304,11 @@ struct MasterLFOView: View {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Rectangle().fill(Color.white.opacity(0.06))
-                            Rectangle().fill(R).frame(width: geo.size.width * CGFloat(mixerState.masterLFO.currentValue))
+                            Rectangle().fill(R).frame(width: geo.size.width * CGFloat(mixerState.masterLFOCurrent))
                         }
                     }
                     .frame(height: 8)
-                    Text("\(Int(mixerState.masterLFO.currentValue * 100))%")
+                    Text("\(Int(mixerState.masterLFOCurrent * 100))%")
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
                         .foregroundColor(.white.opacity(0.8)).frame(width: 36)
                 }

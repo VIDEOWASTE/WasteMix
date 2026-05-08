@@ -188,23 +188,126 @@ struct KeySettings: Codable {
     var threshold: Float = 0.3
     var softness: Float = 0.1
     var keyHue: Float = 120.0
+    /// When false (default), pixels brighter than `threshold` survive and
+    /// dark pixels are knocked out — i.e. "key out the blacks." When true,
+    /// the inverse: dark pixels survive and brights become transparent
+    /// — useful for keying out a white background or knocking out
+    /// hot-spots / specular highlights.
+    var invert: Bool = false
 
     var isActive: Bool { type != .none }
+
+    private enum CodingKeys: String, CodingKey {
+        case type, threshold, softness, keyHue, invert
+    }
+
+    // Backwards-compat decoder so presets saved before `invert` existed
+    // still load (default to false, the prior behavior).
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        type = try c.decodeIfPresent(KeyType.self, forKey: .type) ?? .none
+        threshold = try c.decodeIfPresent(Float.self, forKey: .threshold) ?? 0.3
+        softness = try c.decodeIfPresent(Float.self, forKey: .softness) ?? 0.1
+        keyHue = try c.decodeIfPresent(Float.self, forKey: .keyHue) ?? 120.0
+        invert = try c.decodeIfPresent(Bool.self, forKey: .invert) ?? false
+    }
+}
+
+/// Per-channel rotation override. `.auto` defers to whatever the source
+/// produces (camera frames already track device orientation via
+/// RotationCoordinator); the explicit angles let an operator fix a
+/// sideways-mounted feed by hand.
+enum ChannelRotation: Int, Codable, CaseIterable, Identifiable {
+    case auto = -1
+    case deg0 = 0
+    case deg90 = 90
+    case deg180 = 180
+    case deg270 = 270
+
+    var id: Int { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .auto: return "Auto"
+        case .deg0: return "0°"
+        case .deg90: return "90°"
+        case .deg180: return "180°"
+        case .deg270: return "270°"
+        }
+    }
+
+    /// Radians applied at sample time. `.auto` resolves to 0 (the source has
+    /// already been corrected upstream).
+    var radians: Float {
+        switch self {
+        case .auto, .deg0: return 0
+        case .deg90: return .pi / 2
+        case .deg180: return .pi
+        case .deg270: return 3 * .pi / 2
+        }
+    }
+}
+
+/// How a channel's source (which can be any aspect — portrait phone via
+/// camera, square NDI, etc.) maps into the 1920x1080 program canvas.
+enum ChannelFitMode: String, Codable, CaseIterable, Identifiable {
+    case fit      // letterbox / pillarbox; preserve aspect, black bars on the short side
+    case fill     // crop edges; preserve aspect, no bars
+    case stretch  // ignore source aspect; distort to exactly fill the target
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .fit: return "Fit"
+        case .fill: return "Fill"
+        case .stretch: return "Stretch"
+        }
+    }
+
+    var shaderValue: Int32 {
+        switch self {
+        case .fit: return 0
+        case .fill: return 1
+        case .stretch: return 2
+        }
+    }
 }
 
 struct PIPSettings: Codable {
     var scale: Float = 1.0
     var offsetX: Float = 0.0
     var offsetY: Float = 0.0
+    /// Rotation of the PIP rectangle on the canvas, in degrees. Positive
+    /// values rotate counterclockwise (matches the conventional "tilt left"
+    /// direction in VJ overlays).
+    var rotation: Float = 0.0
 
     var isDefault: Bool {
-        abs(scale - 1.0) < 0.01 && abs(offsetX) < 0.01 && abs(offsetY) < 0.01
+        abs(scale - 1.0) < 0.01 && abs(offsetX) < 0.01 && abs(offsetY) < 0.01 && abs(rotation) < 0.5
     }
 
     mutating func reset() {
         scale = 1.0
         offsetX = 0.0
         offsetY = 0.0
+        rotation = 0.0
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case scale, offsetX, offsetY, rotation
+    }
+
+    init() {}
+
+    // Older presets (before rotation existed) decode with rotation = 0.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        scale = try c.decodeIfPresent(Float.self, forKey: .scale) ?? 1.0
+        offsetX = try c.decodeIfPresent(Float.self, forKey: .offsetX) ?? 0.0
+        offsetY = try c.decodeIfPresent(Float.self, forKey: .offsetY) ?? 0.0
+        rotation = try c.decodeIfPresent(Float.self, forKey: .rotation) ?? 0.0
     }
 }
 

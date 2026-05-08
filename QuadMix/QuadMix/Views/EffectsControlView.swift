@@ -7,6 +7,7 @@ struct EffectsControlView: View {
 
     @State private var showKeySettings = false
     @State private var showPIPSettings = false
+    @State private var showFrameSettings = false
 
     var body: some View {
         VStack(spacing: 4) {
@@ -26,6 +27,9 @@ struct EffectsControlView: View {
                 keyButton
                 pipButton
             }
+
+            // Frame (rotation + fit) row — single button, popover with both
+            frameButton
         }
     }
 
@@ -179,6 +183,95 @@ struct EffectsControlView: View {
                 .frame(width: 280)
         }
     }
+
+    private var frameButton: some View {
+        // Highlight when the operator has overridden either rotation or fit.
+        let active = (channel.rotation != .auto) || (channel.fitMode != .fit)
+        return Button {
+            showFrameSettings.toggle()
+            Haptics.tap()
+        } label: {
+            HStack(spacing: 2) {
+                Image(systemName: "rotate.right")
+                    .font(.system(size: 8))
+                Text("FRAME")
+                    .font(.system(size: 7, weight: .heavy, design: .monospaced))
+            }
+            .foregroundColor(active ? .orange : .gray)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
+            .background(
+                Rectangle()
+                    .fill(active ? Color.orange.opacity(0.15) : Color.white.opacity(0.8))
+                    .overlay(
+                        Rectangle()
+                            .stroke(Color.white.opacity(0.8), lineWidth: 0.5)
+                    )
+            )
+        }
+        .buttonStyle(TactileButtonStyle())
+        .popover(isPresented: $showFrameSettings) {
+            FrameSettingsView(channel: channel)
+                .frame(width: 280)
+        }
+    }
+}
+
+// MARK: - Frame Settings (rotation + fit)
+
+struct FrameSettingsView: View {
+    let channel: Channel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Frame — \(channel.displayName)")
+                    .font(.headline)
+                Spacer()
+                Button("Reset") {
+                    channel.rotation = .auto
+                    channel.fitMode = .fit
+                }
+                .font(.caption)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("ROTATION")
+                    .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                    .foregroundColor(.gray)
+                Picker("Rotation", selection: Binding(
+                    get: { channel.rotation },
+                    set: { channel.rotation = $0 }
+                )) {
+                    ForEach(ChannelRotation.allCases) { r in
+                        Text(r.displayName).tag(r)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("ASPECT")
+                    .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                    .foregroundColor(.gray)
+                Picker("Fit", selection: Binding(
+                    get: { channel.fitMode },
+                    set: { channel.fitMode = $0 }
+                )) {
+                    ForEach(ChannelFitMode.allCases) { m in
+                        Text(m.displayName).tag(m)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text(channel.fitMode == .fit
+                     ? "Letterbox — preserve aspect, black bars on the short side."
+                     : "Crop — preserve aspect, fill the canvas (edges trimmed).")
+                    .font(.system(size: 10))
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding()
+    }
 }
 
 // MARK: - Key Settings
@@ -218,6 +311,18 @@ struct KeySettingsView: View {
                         set: { channel.keySettings.keyHue = $0 }
                     ), range: 0...360, format: "%.0f", tint: .green)
                 }
+
+                Toggle(isOn: Binding(
+                    get: { channel.keySettings.invert },
+                    set: { channel.keySettings.invert = $0 }
+                )) {
+                    Text(channel.keySettings.type == .lumaKey
+                         ? "Invert (key whites instead of blacks)"
+                         : "Invert (keep keyed hue, drop the rest)")
+                        .font(.system(size: 11))
+                }
+                .toggleStyle(.switch)
+                .tint(.green)
             }
         }
         .padding()

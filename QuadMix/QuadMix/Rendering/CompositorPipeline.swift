@@ -16,6 +16,10 @@ struct PIPUniforms {
     var offsetX: Float
     var offsetY: Float
     var opacity: Float
+    var rotationRadians: Float
+    var targetAspect: Float
+    var padding0: Float = 0
+    var padding1: Float = 0
 }
 
 struct ChannelCompositeInfo {
@@ -24,7 +28,6 @@ struct ChannelCompositeInfo {
     let opacity: Float
     let wipeProgress: Float?
     let wipeDirection: Int?
-    let pipSettings: PIPSettings
 }
 
 final class CompositorPipeline {
@@ -75,12 +78,11 @@ final class CompositorPipeline {
 
         for i in 0..<channels.count {
             let ch = channels[i]
-            let chTex = applyPIPIfNeeded(ch: ch, commandBuffer: commandBuffer)
 
             if let progress = ch.wipeProgress, let dir = ch.wipeDirection {
-                renderWipeAB(base: src, layer: chTex, progress: progress, direction: dir, target: dst, commandBuffer: commandBuffer)
+                renderWipeAB(base: src, layer: ch.texture, progress: progress, direction: dir, target: dst, commandBuffer: commandBuffer)
             } else {
-                blendNormal(base: src, layer: chTex, mode: ch.blendMode, opacity: ch.opacity, target: dst, commandBuffer: commandBuffer)
+                blendNormal(base: src, layer: ch.texture, mode: ch.blendMode, opacity: ch.opacity, target: dst, commandBuffer: commandBuffer)
             }
             swap(&src, &dst)
         }
@@ -93,64 +95,7 @@ final class CompositorPipeline {
         }
     }
 
-    // MARK: - PIP
-
-    /// If channel has non-default PIP, renders it scaled/offset into intermediateC.
-    /// Returns the texture to use for compositing (original if no PIP, intermediateC if PIP).
-    private func applyPIPIfNeeded(ch: ChannelCompositeInfo, commandBuffer: MTLCommandBuffer) -> MTLTexture {
-        guard !ch.pipSettings.isDefault, let pipTex = intermediateC else {
-            return ch.texture
-        }
-
-        let desc = renderPass(pipTex, clear: true)
-        guard let enc = commandBuffer.makeRenderCommandEncoder(descriptor: desc) else {
-            return ch.texture
-        }
-
-        enc.setRenderPipelineState(ctx.pipPipeline)
-        enc.setVertexBuffer(ctx.quadVertexBuffer, offset: 0, index: 0)
-        enc.setFragmentTexture(ch.texture, index: 0)
-
-        var u = PIPUniforms(
-            scale: ch.pipSettings.scale,
-            offsetX: ch.pipSettings.offsetX,
-            offsetY: ch.pipSettings.offsetY,
-            opacity: 1.0
-        )
-        enc.setFragmentBytes(&u, length: MemoryLayout<PIPUniforms>.size, index: 0)
-        enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-        enc.endEncoding()
-
-        return pipTex
-    }
-
     // MARK: - Render Passes
-
-    /// Render channel at opacity onto black
-    private func renderWithOpacity(texture: MTLTexture, opacity: Float, target: MTLTexture, commandBuffer: MTLCommandBuffer) {
-        let desc = renderPass(target, clear: true)
-        guard let enc = commandBuffer.makeRenderCommandEncoder(descriptor: desc) else { return }
-        enc.setRenderPipelineState(ctx.passthroughOpacityPipeline)
-        enc.setVertexBuffer(ctx.quadVertexBuffer, offset: 0, index: 0)
-        enc.setFragmentTexture(texture, index: 0)
-        var u = BlendUniforms(opacity: opacity)
-        enc.setFragmentBytes(&u, length: MemoryLayout<BlendUniforms>.size, index: 0)
-        enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-        enc.endEncoding()
-    }
-
-    /// Single-input wipe from black (for base channel)
-    private func renderWipeFromBlack(texture: MTLTexture, progress: Float, direction: Int, target: MTLTexture, commandBuffer: MTLCommandBuffer) {
-        let desc = renderPass(target, clear: true)
-        guard let enc = commandBuffer.makeRenderCommandEncoder(descriptor: desc) else { return }
-        enc.setRenderPipelineState(ctx.wipePipeline)
-        enc.setVertexBuffer(ctx.quadVertexBuffer, offset: 0, index: 0)
-        enc.setFragmentTexture(texture, index: 0)
-        var u = TransitionUniforms(progress: progress, direction: Int32(direction))
-        enc.setFragmentBytes(&u, length: MemoryLayout<TransitionUniforms>.size, index: 0)
-        enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-        enc.endEncoding()
-    }
 
     /// Two-input wipe: spatially cuts between base and layer.
     /// Like a real analog mixer T-bar wipe.

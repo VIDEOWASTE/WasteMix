@@ -41,6 +41,10 @@ final class NDISource: FrameProvider {
 
     func start() {
         guard !sourceName.isEmpty else { return }
+        // Guard against double-start — without this, calling start() twice
+        // leaks the first receiver + cName/cAddr because the second call
+        // overwrites them before stop() can free them.
+        guard !isActive else { return }
 
         // Copy strings to C heap so they survive the entire NDI session
         let nameCopy = strdup(sourceName)
@@ -105,14 +109,20 @@ final class NDISource: FrameProvider {
 
     private func receiveLoop() {
         while isActive {
+            // Hold receiverLock across the entire capture + free pair.
+            // Without this, stop() could destroy `recv` between our
+            // capture and our free, calling FreeVideoFrame on a dangling
+            // pointer (UAF). The lock makes stop() wait until our current
+            // capture/free is finished before it nukes the receiver.
             receiverLock.lock()
-            let recv = receiver
-            receiverLock.unlock()
-
-            guard let recv = recv else { break }
+            guard let recv = receiver else {
+                receiverLock.unlock()
+                break
+            }
 
             var frame = NDIVideoFrame()
-            if NDIWrapper_CaptureVideo(recv, &frame, 100) {
+            let got = NDIWrapper_CaptureVideo(recv, &frame, 100)
+            if got {
                 if frame.data != nil && frame.width > 0 && frame.height > 0 {
                     if let pb = createPixelBuffer(from: frame) {
                         lock.lock()
@@ -120,13 +130,9 @@ final class NDISource: FrameProvider {
                         lock.unlock()
                     }
                 }
-                receiverLock.lock()
-                let stillValid = receiver != nil
-                receiverLock.unlock()
-                if stillValid {
-                    NDIWrapper_FreeVideoFrame(recv, &frame)
-                }
+                NDIWrapper_FreeVideoFrame(recv, &frame)
             }
+            receiverLock.unlock()
         }
         // Tell stop() that the loop has fully exited so it can proceed
         // to destroy the receiver without UI hitch.
@@ -198,15 +204,34 @@ final class NDISource: FrameProvider {
     }
 }
 
-/// NDI Discovery using the NDI SDK finder.
+/// NDI Discovery via Apple's native Bonjour (`NetServiceBrowser`) instead
+/// of NDI's built-in mDNS implementation. Why: NDI Advanced 6's built-in
+/// discovery silently fails on Macs with many network interfaces (utun,
+/// awdl, anpi, bridge, etc.) — the discovery thread either binds to a
+/// wrong interface or never opens its UDP socket at all, and finders
+/// return zero sources forever. `dns-sd -B _ndi._tcp` from the command
+/// line finds the same sources on the same Mac instantly, so going
+/// through `mDNSResponder` (what `dns-sd` uses) is reliable. Same code
+/// path works on iOS / iPadOS / Catalyst because Bonjour is uniform
+/// across Apple platforms.
+///
+/// We still call `NDIWrapper_Initialize()` at startup so the rest of the
+/// NDI lib (send + receive) is ready to go — only the discovery side is
+/// replaced.
 @Observable
-final class NDIDiscovery {
+final class NDIDiscovery: NSObject {
     private(set) var sources: [NDIDiscoveredSource] = []
-    private var finder: NDIFinderRef?
-    private var scanTimer: Timer?
     private var initialized = false
 
-    init() {
+    private let browser = NetServiceBrowser()
+    private var resolving: Set<NetService> = []
+    /// Resolved sources keyed by service name, so additions/removals
+    /// don't produce duplicates if the same service shows up on multiple
+    /// interfaces.
+    private var byName: [String: NDIDiscoveredSource] = [:]
+
+    override init() {
+        super.init()
         initialized = NDIWrapper_Initialize()
     }
 
@@ -216,46 +241,58 @@ final class NDIDiscovery {
     }
 
     func startDiscovery() {
-        guard initialized else { return }
-        finder = NDIWrapper_CreateFinder()
-        guard finder != nil else { return }
-
-        scanTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            self?.pollSources()
-        }
-        pollSources()
+        browser.delegate = self
+        browser.searchForServices(ofType: "_ndi._tcp", inDomain: "local.")
     }
 
     func stopDiscovery() {
-        scanTimer?.invalidate()
-        scanTimer = nil
-        if let f = finder {
-            NDIWrapper_DestroyFinder(f)
-            finder = nil
-        }
+        browser.stop()
+        for s in resolving { s.stop() }
+        resolving.removeAll()
+        byName.removeAll()
+        sources = []
     }
 
-    private func pollSources() {
-        guard let finder = finder else { return }
+    fileprivate func publish() {
+        sources = byName.values.sorted { $0.name < $1.name }
+    }
+}
 
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            var sourcePtr: UnsafeMutablePointer<NDISourceInfo>?
-            let count = NDIWrapper_GetSources(finder, &sourcePtr)
+extension NDIDiscovery: NetServiceBrowserDelegate {
+    func netServiceBrowser(_ browser: NetServiceBrowser,
+                           didFind service: NetService,
+                           moreComing: Bool) {
+        service.delegate = self
+        resolving.insert(service)
+        service.resolve(withTimeout: 5.0)
+    }
 
-            var found: [NDIDiscoveredSource] = []
-            if let ptr = sourcePtr, count > 0 {
-                for i in 0..<Int(count) {
-                    let info = ptr[i]
-                    let name = info.name.map { String(cString: $0) } ?? "Unknown"
-                    let address = info.address.map { String(cString: $0) } ?? ""
-                    found.append(NDIDiscoveredSource(name: name, address: address))
-                }
-                free(sourcePtr)
-            }
+    func netServiceBrowser(_ browser: NetServiceBrowser,
+                           didRemove service: NetService,
+                           moreComing: Bool) {
+        byName.removeValue(forKey: service.name)
+        resolving.remove(service)
+        if !moreComing { publish() }
+    }
+}
 
-            DispatchQueue.main.async {
-                self?.sources = found
-            }
+extension NDIDiscovery: NetServiceDelegate {
+    func netServiceDidResolveAddress(_ sender: NetService) {
+        // NDI URL format is "host:port" — NDI's recv API accepts either
+        // hostnames or IPs. Hostname is more robust if the device's IP
+        // changes mid-session.
+        guard let host = sender.hostName else {
+            resolving.remove(sender)
+            return
         }
+        let url = "\(host):\(sender.port)"
+        byName[sender.name] = NDIDiscoveredSource(name: sender.name, address: url)
+        resolving.remove(sender)
+        publish()
+    }
+
+    func netService(_ sender: NetService,
+                    didNotResolve errorDict: [String: NSNumber]) {
+        resolving.remove(sender)
     }
 }
