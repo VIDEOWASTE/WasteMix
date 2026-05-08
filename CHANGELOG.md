@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+---
+
+## [0.0.5] — 2026-05-07
+
+Audio Visualizer source + LZX-style 4-band envelope reactivity system. 13 visualizer styles with proper neon-on-black bloom, Tunnel rebuilt as a 3D polygon corridor, new Geometry (3D solids) variant, single-band routing so any band drives the whole visualizer.
+
 ### Added
 - **Audio Visualizer source** — pick a channel's source as `Audio: FFT Bars`, `Audio: Waveform`, `Audio: Bars + Waveform`, or one of five WMP-style plasma variants (`Polygons`, `Tunnel`, `Particles`, `Spiral`, `Ribbons`). Pulls from the shared `AudioEngine` (mic input). Renders at 30fps via `CADisplayLink` to a 1280×720 CVPixelBuffer using CGContext drawing. Each plasma variant has its own animated abstract pattern reacting to bass / mid / high band levels and transient peaks (hi-hat / snare hits → particle bursts, ray flashes, etc.).
 - **Visualizer Params section** in the source picker (only shown when a plasma variant is selected) — five sliders: DENSITY (object count), SPEED (animation rate), HUE (color shift), INTENSITY (brightness), BASS (response strength). Stored on `Channel.visualizerParams`; the source reads them each frame so tweaks are live.
@@ -188,7 +194,8 @@ Initial public commit. Mac Catalyst + Windows DirectX builds.
 - Mac Catalyst app shipped as `WasteMix.app`.
 - Windows DirectX 12 / C++ port skeleton (`WasteMixWindows/`).
 
-[Unreleased]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/VIDEOWASTE/WasteMix/compare/v0.0.1...v0.0.2
