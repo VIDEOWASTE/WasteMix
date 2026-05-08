@@ -186,6 +186,7 @@ struct MiniChannelView: View {
         case .solidColor: return "circle.fill"
         case .pattern: return "checkerboard.rectangle"
         case .ndi: return "network"
+        case .audioVisualizer(let style): return style.icon
         }
     }
 }

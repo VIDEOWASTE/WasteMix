@@ -8,6 +8,48 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- **Audio Visualizer source** — pick a channel's source as `Audio: FFT Bars`, `Audio: Waveform`, `Audio: Bars + Waveform`, or one of five WMP-style plasma variants (`Polygons`, `Tunnel`, `Particles`, `Spiral`, `Ribbons`). Pulls from the shared `AudioEngine` (mic input). Renders at 30fps via `CADisplayLink` to a 1280×720 CVPixelBuffer using CGContext drawing. Each plasma variant has its own animated abstract pattern reacting to bass / mid / high band levels and transient peaks (hi-hat / snare hits → particle bursts, ray flashes, etc.).
+- **Visualizer Params section** in the source picker (only shown when a plasma variant is selected) — five sliders: DENSITY (object count), SPEED (animation rate), HUE (color shift), INTENSITY (brightness), BASS (response strength). Stored on `Channel.visualizerParams`; the source reads them each frame so tweaks are live.
+
+### Fixed
+- **PVW glitch with audio visualizer** — single-buffer CPU drawing raced with the GPU consumer (PVW MTKView, compositor sampling). Switched to a 3-buffer ring: `latestPixelBuffer` returns the most recently completed buffer while we draw into the next slot. Consumer never sees a half-drawn frame.
+- **"Clear Source" left the last frame on PVW** — `RenderEngine.tickRender` only updated `channelPreviewTextures[i]` when a new texture arrived, so it kept the last frame from the previous source forever after `setSource(nil, ...)`. Now nils the slot when the source is gone.
+- **"Clear Source" still showed the stale frame** (round 2) — root cause was `ChannelRenderer.lastSourceTexture` being sticky: when the frame provider went nil, the cached last frame kept getting reprocessed through color/effect/key, so `currentTexture(...)` never returned nil and the previous fix didn't trigger. Added a `didSet` on `frameProvider` that drops `lastSourceTexture` and `frozenTexture` when the provider goes nil.
+
+### Changed
+- **Source picker now opens in a panel** instead of a full-screen sheet — keeps PVW and PGM monitors visible at the top, matches the FX / COLOR / AUDIO REACT / MASTER LFO panel pattern. `SourcePickerView` had its `NavigationStack` + toolbar stripped (the panel header provides title + close); `dismiss()` calls swapped for an `onClose` closure. `MixerView.PanelType` gained a `.source(Int)` case.
+- **Waveform redesigned** — now a static horizontal centerline with vertical "value stems" bouncing symmetrically above and below it (was a wiggling polyline). 64 stems, sin-windowed amplitude (peaks in middle, tapers at edges), glow underlay + crisp top stroke per stem.
+- **Plasma family expanded + reworked**: `.plasma` is now a true demoscene flowing-color plasma (3-sin sinusoidal color field rendered at 160×90 and bilinear-upscaled by CG — the look the user originally meant by "plasma"). The old Battery-style is preserved as a separate `.polygons` case. Two new variants added: **Lightning** (jagged glowing bolts triggered by transients/bass kicks, ~0.7s lifespan, subtle screen-flicker tint) and **Mandala** (8–16 fold kaleidoscopic petals rotating with bass).
+- **Particles fixed** — was nearly invisible because emission only fired on rare hi-hat-style transients. Now emits proportional to overall audio energy plus burst on bass kicks AND high-freq transients, longer particle lifespan (~2s), guaranteed baseline trickle so the visualizer is never blank on quiet input.
+
+### Performance / smoothness pass
+- **AudioEngine on the realtime audio thread**: `bandLevel(low:high:)` was allocating a temporary Array per band per audio buffer (7 mallocs × ~43 buffers/sec on the audio thread — recipe for priority-inversion glitches). Replaced with pointer-offset `vDSP_meanv`, zero allocations.
+- **Magnitude computation** in `processBuffer` switched from a Swift `for i in 0..<halfFFT` loop with `sqrtf` to `vDSP_zvabs` — ~5–8× faster.
+- **Visualizer envelope follower** is now asymmetric (40 ms attack, 220 ms release) and dt-based so the perceived envelope shape is identical regardless of frame rate. The previous symmetric `α = 0.4` IIR snapped both ways and felt jittery on bass hits.
+- **Visualizer display link** runs at 60Hz (was 30Hz) — every variant has plenty of CPU headroom and doubling the rate halves visible jitter on motion. ProMotion (120Hz) iPads can run higher; range is 30–120 with preferred 60.
+- **Per-bar attack/release smoothing** for the FFT Bars style — bars now read as stable musical levels that bounce on hits instead of flickering on per-bin FFT noise.
+- **Log-spaced bin mapping** for FFT Bars — bass/low-mids get more horizontal real estate (where most musical content lives) instead of being crammed into 1–2 bars at the left edge.
+- All time-decay constants in the visualizer (`transientPulse`, particle lifespan, lightning bolt life, smoothing alphas) are now frame-rate-independent — computed from real `dt` per tick. Previously hardcoded around `1/30` so changing the display link rate would have broken the timing.
+
+### Added — WMP-aesthetic deep dive
+- **WMP: Plenoptic** (replaces simple plasma flow) — two-layer plasma (broad slow color base + faster detail layer), three wandering radial lens flares with additive blending, bass-driven brightness pulse. The "psychedelic depth" feel the original Plenoptic had over a flat plasma.
+- **WMP: Classic Bars** — Winamp/WMP-style 48-column spectrum: log-spaced FFT bins, full-saturation rainbow palette across the bars, peak-hold caps that snap up on rise and fall slowly, and a subtle floor reflection. Per-bar asymmetric envelope so individual bars don't flicker.
+- **WMP: Alchemy** — flowing translucent ribbons (4–10 of them) with `.plusLighter` additive blending so overlaps brighten to white, Lissajous-style parametric paths, motion-trail decay (each frame dimmed 18% before drawing) for the watercolor / aurora feel.
+- **CRT MODE** post-process toggle in the visualizer params section — applies scanlines (every-other-row darken), faint phosphor tint, and a radial vignette to any visualizer for an early-2000s set-top aesthetic. Per-channel via `VisualizerParams.crtMode`.
+
+### Changed — WMP visualizer aesthetic deep dive (round 2)
+- **`strokeWithGlow` / `fillCircleWithGlow` helpers** added — every shape-based variant now draws each path 4 times in additive blend mode (wide+faint outer halo → crisp+bright core). This is the single biggest thing that gives Winamp/WMP visualizers their characteristic "neon glow on black" look that flat CG strokes were missing.
+- **Polygons / Battery, Spiral, Ribbons, Mandala, Lightning, Tunnel** all now use the bloom helper. Saturation pushed to 0.95+ across the board; brightness near 1.0 on the cores.
+- **Pure black backgrounds** on all variants (no more muddy hue-tinted bgs). Bloom needs true black to read as glow.
+- **Frame trails** on Ribbons, Lightning, Tunnel, Alchemy — each frame dims the previous content 18–25% before drawing, faking persistence-of-vision motion blur without needing a feedback buffer.
+- **Ribbons** rebuilt with quad-curve smoothing between sample points instead of straight line segments — flowing curves instead of jagged polylines.
+- **Spiral** ends each arm with a glowing tip orb (the iconic "trailing sparkle").
+- **Tunnel** got streaking light particles flying from the center outward — the "warp speed" feel that classic WMP Tunnel had.
+- **Lightning** rebuilt with a single neon halo + hot white core (was an outer-glow + crisp-core 2-pass; now a 4-pass bloom + `.plusLighter` core).
+- **WMP: Classic Bars** rebuilt: vertical gradient per bar (saturated neon at the bottom fading to brighter near-white at the top — that LED-strip look), gradient floor reflection, peak-hold caps now drawn last with their own additive halo so they glow over the top edge of each bar.
+- All visualizers in the Plasma family renamed to the **`WMP: …`** prefix in the picker so they read together as a set.
+
 ---
 
 ## [0.0.4] — 2026-05-07

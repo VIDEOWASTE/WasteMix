@@ -152,9 +152,14 @@ final class AudioEngine {
         vDSP_measqv(channelData, 1, &rms, vDSP_Length(count))
         rms = sqrtf(rms)
 
-        // Apply Hann window into the pre-allocated `windowed` buffer.
-        // Zero out tail of `windowed` if last buffer was longer than `count`.
-        for j in 0..<count { windowed[j] = channelData[j] * window[j] }
+        // DC removal: subtract the buffer mean before windowing. Without
+        // this, any DC offset in the mic signal produces a huge bin-0
+        // magnitude that dominates the post-normalize spectrum and pegs
+        // every low-frequency bar at 100%.
+        var dcMean: Float = 0
+        vDSP_meanv(channelData, 1, &dcMean, vDSP_Length(count))
+        // Apply Hann window AND DC-correction in one pass.
+        for j in 0..<count { windowed[j] = (channelData[j] - dcMean) * window[j] }
         if count < fftSize {
             for j in count..<fftSize { windowed[j] = 0 }
         }
@@ -167,10 +172,23 @@ final class AudioEngine {
 
         vDSP_DFT_Execute(setup, &realIn, &imagIn, &realOut, &imagOut)
 
-        // Magnitude into pre-allocated `magnitudes`.
-        for i in 0..<halfFFT {
-            magnitudes[i] = sqrtf(realOut[i] * realOut[i] + imagOut[i] * imagOut[i])
+        // Magnitude into pre-allocated `magnitudes` — Accelerate's
+        // `vDSP_zvabs` (complex absolute value) is ~5–8x faster than the
+        // Swift loop that was here.
+        realOut.withUnsafeMutableBufferPointer { rBuf in
+            imagOut.withUnsafeMutableBufferPointer { iBuf in
+                var split = DSPSplitComplex(realp: rBuf.baseAddress!, imagp: iBuf.baseAddress!)
+                vDSP_zvabs(&split, 1, &magnitudes, 1, vDSP_Length(halfFFT))
+            }
         }
+
+        // Belt-and-suspenders: also zero the bottom two bins explicitly.
+        // DC removal above kills bin 0; bin 1 still gets some spectral
+        // leakage from any sub-43 Hz content the FFT can't resolve, and
+        // including it in the normalize-by-max squashes the rest of the
+        // spectrum.
+        magnitudes[0] = 0
+        if halfFFT > 1 { magnitudes[1] = 0 }
 
         // Normalize
         var maxMag: Float = 0
@@ -180,16 +198,24 @@ final class AudioEngine {
             vDSP_vsmul(magnitudes, 1, &scale, &magnitudes, 1, vDSP_Length(halfFFT))
         }
 
-        // Compute band levels
+        // Compute band levels — pointer-offset `vDSP_meanv` so we don't
+        // allocate seven temp Arrays per audio callback (the previous
+        // `Array(magnitudes[start..<end])` slice was a malloc on the
+        // realtime audio thread, which is a recipe for priority inversion
+        // glitches under load).
         let binWidth = sampleRate / Float(fftSize)
+        let halfFFTUpper = halfFFT - 1
 
         func bandLevel(low: Float, high: Float) -> Float {
             let startBin = max(0, Int(low / binWidth))
-            let endBin = min(halfFFT - 1, Int(high / binWidth))
+            let endBin = min(halfFFTUpper, Int(high / binWidth))
             guard endBin > startBin else { return 0 }
-            let slice = Array(magnitudes[startBin..<endBin])
             var mean: Float = 0
-            vDSP_meanv(slice, 1, &mean, vDSP_Length(slice.count))
+            magnitudes.withUnsafeBufferPointer { buf in
+                if let base = buf.baseAddress {
+                    vDSP_meanv(base + startBin, 1, &mean, vDSP_Length(endBin - startBin))
+                }
+            }
             return mean
         }
 

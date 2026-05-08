@@ -72,6 +72,9 @@ final class Channel: Identifiable {
     // Audio reactivity
     var audioReact = AudioReactSettings()
 
+    // Audio visualizer params (only used when source is .audioVisualizer)
+    var visualizerParams = VisualizerParams()
+
     init(id: Int) {
         self.id = id
     }

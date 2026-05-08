@@ -130,6 +130,12 @@ final class RenderEngine: NSObject {
             let channel = mixerState.channels[i]
 
             let texMaybe = renderer.currentTexture(commandBuffer: commandBuffer)
+            // Clear the preview slot when the source goes away — otherwise
+            // the PVW MTKView keeps presenting the last frame from the
+            // previously-attached source after the user hits "Clear Source".
+            if texMaybe == nil {
+                channelPreviewTextures[i] = nil
+            }
             if let tex = texMaybe {
                 channelPreviewTextures[i] = tex
 

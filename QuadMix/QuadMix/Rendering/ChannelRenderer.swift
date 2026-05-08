@@ -4,7 +4,21 @@ import QuartzCore
 final class ChannelRenderer {
     let channel: Channel
     private let ctx = MetalContext.shared
-    var frameProvider: FrameProvider?
+    /// When the source is cleared (set to nil), drop the cached last
+    /// source/freeze textures too — otherwise `currentTexture(...)` keeps
+    /// reprocessing the stale frame and PVW shows the old image
+    /// indefinitely. This is the actual cause of the "Clear Source still
+    /// shows the last frame" bug; the earlier `RenderEngine` nil-check
+    /// fired only when `currentTexture` returned nil, but `lastSourceTexture`
+    /// kept it non-nil.
+    var frameProvider: FrameProvider? {
+        didSet {
+            if frameProvider == nil {
+                lastSourceTexture = nil
+                frozenTexture = nil
+            }
+        }
+    }
 
     private var lastSourceTexture: MTLTexture?
     private var frozenTexture: MTLTexture?

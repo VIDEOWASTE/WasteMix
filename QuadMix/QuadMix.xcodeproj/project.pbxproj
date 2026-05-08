@@ -69,6 +69,7 @@
 		A10101 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B10101 /* PrivacyInfo.xcprivacy */; };
 		A10102 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10102 /* AboutView.swift */; };
 		A10103 /* ExternalDisplayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10103 /* ExternalDisplayController.swift */; };
+		A10110 /* AudioVisualizerSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10110 /* AudioVisualizerSource.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -138,6 +139,7 @@
 		B10101 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B10102 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		B10103 /* ExternalDisplayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalDisplayController.swift; sourceTree = "<group>"; };
+		B10110 /* AudioVisualizerSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioVisualizerSource.swift; sourceTree = "<group>"; };
 		C10000 /* WasteMix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WasteMix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -233,6 +235,7 @@
 				B10023 /* NDISource.swift */,
 				B10024 /* InputManager.swift */,
 				B10049 /* AudioEngine.swift */,
+				B10110 /* AudioVisualizerSource.swift */,
 			);
 			path = Input;
 			sourceTree = "<group>";
@@ -417,6 +420,7 @@
 				A10020 /* MediaPlayerSource.swift in Sources */,
 				A10021 /* ImageSource.swift in Sources */,
 				A10022 /* PatternGeneratorSource.swift in Sources */,
+				A10110 /* AudioVisualizerSource.swift in Sources */,
 				A10023 /* NDISource.swift in Sources */,
 				A10024 /* InputManager.swift in Sources */,
 				A10025 /* MixerView.swift in Sources */,

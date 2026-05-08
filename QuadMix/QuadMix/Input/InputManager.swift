@@ -19,7 +19,7 @@ final class InputManager {
         ndiDiscovery.sources
     }
 
-    func applySource(_ source: ContentSource, to channelIndex: Int, renderEngine: RenderEngine) {
+    func applySource(_ source: ContentSource, to channelIndex: Int, channel: Channel? = nil, renderEngine: RenderEngine) {
         logger.error("applySource called: channel=\(channelIndex)")
         activeSources[channelIndex]?.stop()
 
@@ -39,6 +39,10 @@ final class InputManager {
             provider = PatternGeneratorSource(pattern: type)
         case .ndi(let name, let address):
             provider = NDISource(sourceName: name, ipAddress: address)
+        case .audioVisualizer(let style):
+            // Channel ref lets the visualizer read live params (density,
+            // hue, speed, etc.) — passed weakly inside the source.
+            provider = AudioVisualizerSource(style: style, channel: channel, audioEngine: renderEngine.audioEngine)
         }
 
         activeSources[channelIndex] = provider
@@ -49,6 +53,16 @@ final class InputManager {
         activeSources[channelIndex]?.stop()
         activeSources.removeValue(forKey: channelIndex)
         renderEngine.setSource(nil, for: channelIndex)
+    }
+
+    /// Returns the live 5-channel envelope output for the active audio
+    /// visualizer on this channel (post-GAIN, post-THRESHOLD, post-
+    /// ATTACK/RELEASE — the actual value the visualizer is using each
+    /// frame). Nil if the channel's source isn't an AudioVisualizerSource.
+    /// Used by the source picker to drive the live band meters so the
+    /// user can see their envelope tweaks taking effect.
+    func liveVisualizerEnvelopes(for channelIndex: Int) -> [Float]? {
+        return (activeSources[channelIndex] as? AudioVisualizerSource)?.liveEnvelopes
     }
 
     private func checkCameraPermission() {

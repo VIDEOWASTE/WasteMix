@@ -26,6 +26,7 @@ struct MixerView: View {
         case presets
         case advancedOutput
         case masterLFO
+        case source(Int)
     }
     @State private var activePanel: PanelType = .none
     @State private var sourcePickerChannel: Int? = nil
@@ -42,29 +43,48 @@ struct MixerView: View {
     var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
-            // Bigger scale ceiling for iPad touch targets — was 1.5, was hitting that cap on every iPad.
-            let scaleFactor = min(2.2, max(0.55, w / 500.0))
+            let h = geo.size.height
+
+            // Liquid layout — every region scales proportionally with the
+            // window so the mixer fills the space whether it's a Slide Over
+            // sliver, half-screen Stage Manager, or full-screen iPad Pro.
+            // Monitors take a fixed share of height; the mixer below
+            // computes its own scale to fill the remaining area.
+            let monitorH = min(320, max(96, h * 0.28))
+            let topBarH: CGFloat = 30
+            let chromePad: CGFloat = 8
+            let contentH = max(180, h - topBarH - monitorH - chromePad)
+            // Natural unscaled height of the channels HStack + master
+            // VStack. Empirical baseline; bump if the layout grows
+            // vertically.
+            let naturalContentH: CGFloat = 560
+            let naturalContentW: CGFloat = 500
+            let scaleW = w / naturalContentW
+            let scaleH = contentH / naturalContentH
+            // Pure min(scaleW, scaleH) — no floor, no ceiling. The mixer
+            // gracefully shrinks for tiny windows and grows for big ones,
+            // always filling the available space without scrolling or
+            // clipping.
+            let scaleFactor = min(scaleW, scaleH)
 
             VStack(spacing: 0) {
                 topBar
-                monitors
+                monitors.frame(height: monitorH)
 
                 ZStack {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 0) {
-                            HStack(alignment: .top, spacing: 3) {
-                                ForEach(0..<4) { i in channelCell(i) }
-                            }
-                            .padding(.horizontal, 3).padding(.top, 3)
-
-                            masterSection(width: w)
-                                .padding(.horizontal, 3).padding(.top, 4).padding(.bottom, 8)
+                    VStack(spacing: 0) {
+                        HStack(alignment: .top, spacing: 3) {
+                            ForEach(0..<4) { i in channelCell(i) }
                         }
-                        .scaleEffect(scaleFactor, anchor: .topLeading)
-                        .frame(width: w / scaleFactor, alignment: .leading)
-                        .frame(width: w, alignment: .leading)
+                        .padding(.horizontal, 3).padding(.top, 3)
+
+                        masterSection(width: w)
+                            .padding(.horizontal, 3).padding(.top, 4).padding(.bottom, 8)
                     }
-                    .clipped()
+                    .scaleEffect(scaleFactor, anchor: .topLeading)
+                    .frame(width: w / scaleFactor, alignment: .leading)
+                    .frame(width: w, alignment: .leading)
+                    .frame(maxHeight: .infinity, alignment: .top)
                     .opacity(activePanel == .none ? 1 : 0.3)
 
                     if activePanel != .none {
@@ -81,19 +101,14 @@ struct MixerView: View {
         .preferredColorScheme(.dark)
         .onAppear { Haptics.prepare() }
         .statusBarHidden()
-        .sheet(isPresented: Binding(
-            get: { sourcePickerChannel != nil },
-            set: { if !$0 { sourcePickerChannel = nil } }
-        )) {
-            if let chIndex = sourcePickerChannel, chIndex < mixerState.channels.count {
-                NavigationStack {
-                    SourcePickerView(
-                        channel: mixerState.channels[chIndex],
-                        renderEngine: renderEngine,
-                        inputManager: inputManager
-                    )
-                }
-                .frame(minWidth: 400, idealWidth: 500, minHeight: 500, idealHeight: 600)
+        // Route any change to `sourcePickerChannel` (set by the channel-strip
+        // SourceButton) into the unified panel system so the source picker
+        // opens as a panel — keeping PVW/PGM monitors visible at the top —
+        // instead of a full-screen sheet that covered them.
+        .onChange(of: sourcePickerChannel) { _, new in
+            if let i = new {
+                activePanel = .source(i)
+                sourcePickerChannel = nil
             }
         }
     }
@@ -156,6 +171,9 @@ struct MixerView: View {
         case .masterLFO:
             Text("MASTER LFO")
                 .font(.system(size: fs, weight: .black, design: .monospaced)).foregroundColor(.white)
+        case .source(let i):
+            Text("SOURCE — CH\(i+1)")
+                .font(.system(size: fs, weight: .black, design: .monospaced)).foregroundColor(.white)
         case .advancedOutput:
             EmptyView()
         case .none:
@@ -180,6 +198,15 @@ struct MixerView: View {
             PresetListView(mixerState: mixerState, presetManager: presetManager)
         case .masterLFO:
             MasterLFOView(mixerState: mixerState).padding()
+        case .source(let i):
+            if i < mixerState.channels.count {
+                SourcePickerView(
+                    channel: mixerState.channels[i],
+                    renderEngine: renderEngine,
+                    inputManager: inputManager,
+                    onClose: { activePanel = .none }
+                )
+            }
         case .advancedOutput:
             EmptyView()
         case .none:
@@ -754,6 +781,7 @@ struct SourceButton: View {
         case .solidColor: return "circle.fill"
         case .pattern: return "checkerboard.rectangle"
         case .ndi: return "network"
+        case .audioVisualizer(let style): return style.icon
         }
     }
     var body: some View {
