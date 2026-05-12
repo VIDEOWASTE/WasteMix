@@ -29,6 +29,9 @@ final class InputManager {
         case .camera(let position):
             NSLog("[InputManager] Creating CameraSource position=%d", position.rawValue)
             provider = CameraSource(position: position)
+        case .externalCamera(let uniqueID, let displayName):
+            NSLog("[InputManager] Creating ExternalCameraSource uniqueID=%@", uniqueID)
+            provider = ExternalCameraSource(uniqueID: uniqueID, displayName: displayName)
         case .mediaFile(let url):
             provider = MediaPlayerSource(url: url)
         case .image(let url):

@@ -53,6 +53,42 @@ struct SourcePickerView: View {
                         }
                     }
 
+                    // External / UVC — HDMI capture cards, USB webcams,
+                    // Continuity Camera, Studio Display camera, etc. The
+                    // device list updates live as cards are plugged in or
+                    // unplugged (CameraHub publishes via KVO).
+                    sourceSection("External Capture (UVC)") {
+                        let externals = CameraHub.shared.availableExternalDevices
+                        if externals.isEmpty {
+                            HStack(spacing: 10) {
+                                Image(systemName: "cable.connector")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.gray)
+                                    .frame(width: 28)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text("No capture devices")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.7))
+                                    Text("Connect an HDMI capture card or USB camera via USB-C")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.gray)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                        } else {
+                            ForEach(externals, id: \.uniqueID) { device in
+                                sourceRow(icon: "cable.connector", label: device.localizedName, tint: .orange) {
+                                    selectSource(.externalCamera(
+                                        uniqueID: device.uniqueID,
+                                        displayName: device.localizedName
+                                    ))
+                                }
+                            }
+                        }
+                    }
+
                     // NDI Sources
                     sourceSection("NDI Network Sources") {
                         if inputManager.discoveredNDISources.isEmpty {

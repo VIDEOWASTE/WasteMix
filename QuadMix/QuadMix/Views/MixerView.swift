@@ -27,6 +27,7 @@ struct MixerView: View {
         case advancedOutput
         case masterLFO
         case source(Int)
+        case mediaCenter
     }
     @State private var activePanel: PanelType = .none
     @State private var sourcePickerChannel: Int? = nil
@@ -168,6 +169,9 @@ struct MixerView: View {
         case .source(let i):
             Text("SOURCE — CH\(i+1)")
                 .font(.system(size: fs, weight: .black, design: .monospaced)).foregroundColor(.white)
+        case .mediaCenter:
+            Text("MEDIA CENTER")
+                .font(.system(size: fs, weight: .black, design: .monospaced)).foregroundColor(.white)
         case .advancedOutput:
             EmptyView()
         case .none:
@@ -201,6 +205,14 @@ struct MixerView: View {
                     onClose: { activePanel = .none }
                 )
             }
+        case .mediaCenter:
+            MediaCenterView(
+                clipLibrary: renderEngine.clipLibrary,
+                mixerState: mixerState,
+                inputManager: inputManager,
+                renderEngine: renderEngine,
+                onAssigned: { activePanel = .none }
+            )
         case .advancedOutput:
             EmptyView()
         case .none:
@@ -406,6 +418,7 @@ struct MixerView: View {
                                 // notably Invert at 0.5 is fully grey).
                                 ch.effectIntensity = fx.defaultIntensity
                                 ch.effectParam2 = fx.defaultParam2
+                                ch.effectExtraParams = fx.defaultExtraParams
                                 Haptics.tap()
                             } label: {
                                 Label(fx.displayName, systemImage: fx == ch.effectType ? "checkmark" : fx.icon)
@@ -707,6 +720,20 @@ struct MixerView: View {
                             }.buttonStyle(TactileButtonStyle())
                         }
                     }
+
+                    // Program record — second row under SAVE/LOAD. While
+                    // recording, button turns red and shows mm:ss elapsed.
+                    // Sits next to the MEDIA button so finished clips are
+                    // one tap away from being loaded as a channel source.
+                    Rectangle().fill(R.opacity(0.04)).frame(height: 0.5)
+                    mstCellView {
+                        HStack(spacing: 3) {
+                            ProgramRecordButton(recorder: renderEngine.recorder)
+                            MediaCenterButton(clipCount: renderEngine.clipLibrary.clips.count) {
+                                activePanel = .mediaCenter
+                            }
+                        }
+                    }
                 }
                 .frame(minWidth: 0, maxWidth: .infinity)
             }
@@ -770,6 +797,7 @@ struct SourceButton: View {
         guard let s = channel.source else { return "plus.circle" }
         switch s {
         case .camera: return "camera.fill"
+        case .externalCamera: return "cable.connector"
         case .mediaFile: return "film"
         case .image: return "photo"
         case .solidColor: return "circle.fill"
@@ -851,6 +879,7 @@ struct FXParamsPanel: View {
                                     channel.effectType = fx
                                     channel.effectIntensity = fx.defaultIntensity
                                     channel.effectParam2 = fx.defaultParam2
+                                    channel.effectExtraParams = fx.defaultExtraParams
                                 }
                                 Haptics.tap()
                             } label: {
@@ -874,28 +903,23 @@ struct FXParamsPanel: View {
                     }
                 }
 
-                // Effect-specific parameters
-                if channel.effectType != .none && channel.effectType != .freeze {
+                // Effect-specific parameters — one slider per spec the
+                // selected effect declares. Slot 0 = effectIntensity,
+                // slot 1 = effectParam2, slots 2-5 = effectExtraParams[0-3].
+                let specs = channel.effectType.paramSpecs
+                if !specs.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("PARAMETERS — \(channel.effectType.displayName.uppercased())")
                             .font(.system(size: 11, weight: .black, design: .monospaced))
                             .foregroundColor(R.opacity(0.7))
 
-                        // Primary parameter
-                        paramSlider(
-                            label: channel.effectType.param1Label.uppercased(),
-                            value: Binding(get: { channel.effectIntensity }, set: { channel.effectIntensity = $0 })
-                        )
-
-                        // Secondary parameter (if this effect has one)
-                        if channel.effectType.hasParam2 {
+                        ForEach(Array(specs.enumerated()), id: \.offset) { idx, spec in
                             paramSlider(
-                                label: channel.effectType.param2Label.uppercased(),
-                                value: Binding(get: { channel.effectParam2 }, set: { channel.effectParam2 = $0 })
+                                label: spec.label,
+                                value: paramBinding(for: idx)
                             )
                         }
 
-                        // Effect-specific info
                         effectDescription
                     }
                     .padding(8)
@@ -950,7 +974,10 @@ struct FXParamsPanel: View {
                 // device-orientation tracking is what drives the rotation
                 // need. Other source types come in at the resolution they
                 // were authored at.
-                if case .camera = channel.source {
+                // Framing controls are useful for any live-capture-style
+                // source (built-in camera or external/UVC) — both can come
+                // in at arbitrary rotation/aspect.
+                if channel.source?.isCameraLike == true {
                 Divider()
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -1006,7 +1033,7 @@ struct FXParamsPanel: View {
                     .font(.system(size: 9))
                     .foregroundColor(.gray)
                 }
-                } // end of `if case .camera`
+                } // end framing (camera / externalCamera)
 
                 Divider()
 
@@ -1051,6 +1078,33 @@ struct FXParamsPanel: View {
         .background(Color(red: 0.06, green: 0.06, blue: 0.07))
     }
 
+    /// Binds slider index to the right channel storage:
+    ///   0 → effectIntensity, 1 → effectParam2, 2-5 → effectExtraParams[0-3].
+    private func paramBinding(for slot: Int) -> Binding<Float> {
+        switch slot {
+        case 0:
+            return Binding(get: { channel.effectIntensity },
+                           set: { channel.effectIntensity = $0 })
+        case 1:
+            return Binding(get: { channel.effectParam2 },
+                           set: { channel.effectParam2 = $0 })
+        default:
+            let extraIdx = slot - 2
+            return Binding(
+                get: {
+                    channel.effectExtraParams.indices.contains(extraIdx)
+                        ? channel.effectExtraParams[extraIdx] : 0.5
+                },
+                set: { newValue in
+                    while channel.effectExtraParams.count <= extraIdx {
+                        channel.effectExtraParams.append(0.5)
+                    }
+                    channel.effectExtraParams[extraIdx] = newValue
+                }
+            )
+        }
+    }
+
     private func paramSlider(label: String, value: Binding<Float>) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -1083,7 +1137,6 @@ struct FXParamsPanel: View {
             case .invert: return "Inverts colors. 0% = normal, 100% = full negative"
             case .mosaic: return "Pixelates the image. Higher = larger blocks"
             case .strobe: return "Flashes the image on/off at the set speed"
-            case .rgbSplit: return "Separates R/G/B channels horizontally. Use vertical split for Y axis"
             case .posterize: return "Reduces color levels. Higher = more extreme"
             case .blur: return "Softens the image. Use direction bias for directional blur"
             default: return ""
@@ -1139,6 +1192,90 @@ struct ChannelColorButton: View {
             .overlay(Rectangle().stroke(on ? WMRed : Color.white.opacity(0.1), lineWidth: on ? 1 : 0.5))
             .contentShape(Rectangle())
         }.buttonStyle(TactileButtonStyle())
+    }
+}
+
+
+struct ProgramRecordButton: View {
+    let recorder: ProgramRecorder
+    private let R = Color(red: 1.0, green: 0.15, blue: 0.15)
+
+    var body: some View {
+        Button {
+            recorder.toggle()
+            Haptics.thud()
+        } label: {
+            VStack(spacing: 1) {
+                if recorder.isRecording {
+                    HStack(spacing: 3) {
+                        Circle().fill(R).frame(width: 6, height: 6)
+                            .shadow(color: R.opacity(0.7), radius: 3)
+                        Text(timeString(recorder.elapsedSeconds))
+                            .font(.system(size: 9, weight: .black, design: .monospaced))
+                            .foregroundColor(.white)
+                    }
+                    Text("STOP")
+                        .font(.system(size: 6, weight: .heavy, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.85))
+                } else {
+                    Image(systemName: "record.circle")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(R)
+                    Text("REC")
+                        .font(.system(size: 6, weight: .heavy, design: .monospaced))
+                        .foregroundColor(R.opacity(0.85))
+                }
+            }
+            .frame(maxWidth: .infinity).padding(.vertical, 6)
+            .background(
+                Rectangle().fill(recorder.isRecording ? R.opacity(0.45) : R.opacity(0.10))
+            )
+            .overlay(
+                Rectangle().stroke(recorder.isRecording ? R : R.opacity(0.35),
+                                   lineWidth: recorder.isRecording ? 1 : 0.5)
+            )
+        }
+        .buttonStyle(TactileButtonStyle())
+    }
+
+    private func timeString(_ s: Double) -> String {
+        let total = Int(s)
+        return String(format: "%02d:%02d", total / 60, total % 60)
+    }
+}
+
+struct MediaCenterButton: View {
+    let clipCount: Int
+    var action: () -> Void
+    private let R = Color(red: 1.0, green: 0.15, blue: 0.15)
+
+    var body: some View {
+        Button {
+            action(); Haptics.tap()
+        } label: {
+            VStack(spacing: 1) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "film.stack")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                    if clipCount > 0 {
+                        Text("\(min(clipCount, 99))")
+                            .font(.system(size: 7, weight: .black, design: .monospaced))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 3).padding(.vertical, 0.5)
+                            .background(R)
+                            .offset(x: 7, y: -4)
+                    }
+                }
+                Text("MEDIA")
+                    .font(.system(size: 6, weight: .heavy, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.85))
+            }
+            .frame(maxWidth: .infinity).padding(.vertical, 6)
+            .background(Rectangle().fill(Color.white.opacity(0.05)))
+            .overlay(Rectangle().stroke(Color.white.opacity(0.18), lineWidth: 0.5))
+        }
+        .buttonStyle(TactileButtonStyle())
     }
 }
 

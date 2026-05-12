@@ -181,6 +181,7 @@ struct MiniChannelView: View {
         guard let source = channel.source else { return "plus" }
         switch source {
         case .camera: return "camera.fill"
+        case .externalCamera: return "cable.connector"
         case .mediaFile: return "film"
         case .image: return "photo"
         case .solidColor: return "circle.fill"

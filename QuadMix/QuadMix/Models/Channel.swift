@@ -59,8 +59,12 @@ final class Channel: Identifiable {
 
     // Effects
     var effectType: EffectType = .none
-    var effectIntensity: Float = 0.5
-    var effectParam2: Float = 0.0
+    var effectIntensity: Float = 0.5  // = uniform.param1
+    var effectParam2: Float = 0.0     // = uniform.param2
+    /// Extra effect parameters 3-6 (uniform.param3 .. param6). Variable-
+    /// width per effect; effects with only 1-2 knobs ignore these. Sized
+    /// to 4 so all slots are always addressable from the shader.
+    var effectExtraParams: [Float] = [0.5, 0.5, 0.5, 0.5]
     var isFrozen: Bool = false
 
     // LFO

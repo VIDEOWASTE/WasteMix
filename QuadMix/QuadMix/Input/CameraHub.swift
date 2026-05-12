@@ -6,28 +6,49 @@ import CoreVideo
 /// register here for a position; they all read frames from the same per-position
 /// AVCaptureVideoDataOutput. This is what allows front + back cameras to be
 /// active simultaneously on iPad Pro.
+///
+/// Also handles external / UVC capture cards (HDMI capture, USB webcams,
+/// Studio Display camera, etc.) via a parallel uniqueID-keyed path. External
+/// devices on iOS report `position == .unspecified`, so a position-only API
+/// would never see them — we register them by `device.uniqueID` instead.
+@Observable
 final class CameraHub: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
-    static let shared = CameraHub()
+    @ObservationIgnored static let shared = CameraHub()
 
     /// True when the device + OS support concurrent multi-cam capture (iPad
     /// Pro and recent iPhones). Read by CameraSource for fallback decisions.
-    let isMultiCamSupported: Bool
+    @ObservationIgnored let isMultiCamSupported: Bool
 
-    let session: AVCaptureSession
-    private let queue = DispatchQueue(label: "com.wastemix.camerahub")
-    private let lock = NSLock()
+    @ObservationIgnored let session: AVCaptureSession
+    @ObservationIgnored private let queue = DispatchQueue(label: "com.wastemix.camerahub")
+    @ObservationIgnored private let lock = NSLock()
 
-    private var inputs: [AVCaptureDevice.Position: AVCaptureDeviceInput] = [:]
-    private var outputs: [AVCaptureDevice.Position: AVCaptureVideoDataOutput] = [:]
-    private var consumers: [AVCaptureDevice.Position: NSHashTable<CameraSource>] = [:]
-    private var latestBuffers: [AVCaptureDevice.Position: CVPixelBuffer] = [:]
+    @ObservationIgnored private var inputs: [AVCaptureDevice.Position: AVCaptureDeviceInput] = [:]
+    @ObservationIgnored private var outputs: [AVCaptureDevice.Position: AVCaptureVideoDataOutput] = [:]
+    @ObservationIgnored private var consumers: [AVCaptureDevice.Position: NSHashTable<CameraSource>] = [:]
+    @ObservationIgnored private var latestBuffers: [AVCaptureDevice.Position: CVPixelBuffer] = [:]
+
+    // External / UVC capture path — keyed by AVCaptureDevice.uniqueID so
+    // multiple cards on the same USB-C hub can be addressed independently.
+    // Mirrors the built-in-camera storage above but on a different key type.
+    @ObservationIgnored private var externalInputs: [String: AVCaptureDeviceInput] = [:]
+    @ObservationIgnored private var externalOutputs: [String: AVCaptureVideoDataOutput] = [:]
+    @ObservationIgnored private var externalConsumers: [String: NSHashTable<ExternalCameraSource>] = [:]
+    @ObservationIgnored private var externalLatestBuffers: [String: CVPixelBuffer] = [:]
+
+    /// Currently-attached external / UVC capture devices, refreshed as
+    /// devices are plugged or unplugged. Observed by the source picker so
+    /// the UVC section updates live. Published on the main thread.
+    private(set) var availableExternalDevices: [AVCaptureDevice] = []
+    @ObservationIgnored private var externalDiscovery: AVCaptureDevice.DiscoverySession?
+    @ObservationIgnored private var externalDiscoveryObs: NSKeyValueObservation?
 
     // Live rotation tracking. RotationCoordinator emits a horizon-level angle
     // that updates as the device rotates (landscape↔portrait), and we KVO it
     // to keep `connection.videoRotationAngle` in sync. Without this the camera
     // is locked to whatever orientation the device was in at attach time.
-    private var rotationCoordinators: [AVCaptureDevice.Position: Any] = [:]
-    private var rotationObservations: [AVCaptureDevice.Position: NSKeyValueObservation] = [:]
+    @ObservationIgnored private var rotationCoordinators: [AVCaptureDevice.Position: Any] = [:]
+    @ObservationIgnored private var rotationObservations: [AVCaptureDevice.Position: NSKeyValueObservation] = [:]
 
 
     override init() {
@@ -50,10 +71,56 @@ final class CameraHub: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         // stay black until the app is force-relaunched.
         nc.addObserver(self, selector: #selector(handleInterruptionEnded(_:)),
                        name: .AVCaptureSessionInterruptionEnded, object: session)
+
+        startExternalDiscovery()
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        externalDiscoveryObs?.invalidate()
+    }
+
+    // MARK: - External / UVC discovery
+
+    /// Builds a DiscoverySession that watches only external devices and
+    /// publishes its current `devices` list to `availableExternalDevices`
+    /// via KVO. Updates fire on hot-plug (HDMI capture card connect /
+    /// disconnect) without polling.
+    private func startExternalDiscovery() {
+        var types: [AVCaptureDevice.DeviceType] = [.external]
+        if #available(iOS 17.0, macCatalyst 17.0, *) {
+            types.append(.continuityCamera)
+        }
+        let session = AVCaptureDevice.DiscoverySession(
+            deviceTypes: types, mediaType: .video, position: .unspecified
+        )
+        externalDiscovery = session
+        let initial = session.devices
+        DispatchQueue.main.async { [weak self] in
+            self?.availableExternalDevices = initial
+        }
+        externalDiscoveryObs = session.observe(\.devices, options: [.new]) { [weak self] s, _ in
+            let devs = s.devices
+            DispatchQueue.main.async {
+                self?.availableExternalDevices = devs
+                self?.handleExternalDeviceListChange(devs)
+            }
+        }
+    }
+
+    /// Called when the OS reports the list of attached external devices
+    /// changed. If an active external source's device just disappeared,
+    /// detach it cleanly so the session doesn't stay wedged on a missing
+    /// input. Built-in cameras are unaffected.
+    private func handleExternalDeviceListChange(_ devices: [AVCaptureDevice]) {
+        let attachedIDs = Set(devices.map { $0.uniqueID })
+        queue.async { [weak self] in
+            guard let self = self else { return }
+            let knownIDs = Set(self.externalInputs.keys)
+            for missing in knownIDs.subtracting(attachedIDs) {
+                self.detachExternalInput(uniqueID: missing)
+            }
+        }
     }
 
     // MARK: - Public API
@@ -118,6 +185,135 @@ final class CameraHub: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         return latestBuffers[position]
     }
 
+    // MARK: - External / UVC public API
+
+    func registerExternal(_ source: ExternalCameraSource, uniqueID: String) {
+        queue.async { [weak self] in
+            guard let self = self else { return }
+            self.attachExternalInputIfNeeded(uniqueID: uniqueID)
+
+            if self.externalConsumers[uniqueID] == nil {
+                self.externalConsumers[uniqueID] = NSHashTable<ExternalCameraSource>.weakObjects()
+            }
+            self.externalConsumers[uniqueID]?.add(source)
+
+            if !self.session.isRunning {
+                self.session.startRunning()
+            }
+        }
+    }
+
+    func unregisterExternal(_ source: ExternalCameraSource, uniqueID: String) {
+        queue.async { [weak self] in
+            guard let self = self else { return }
+            self.externalConsumers[uniqueID]?.remove(source)
+            let stillUsed = (self.externalConsumers[uniqueID]?.count ?? 0) > 0
+
+            // External devices must always detach on zero consumers — they
+            // can be unplugged any moment, and an idle attached input would
+            // wedge the session if the cable goes away. Multi-cam fast-path
+            // benefit doesn't apply since the user can't switch "back" to a
+            // disconnected card.
+            if !stillUsed {
+                self.detachExternalInput(uniqueID: uniqueID)
+            }
+
+            let totalBuiltIn = self.consumers.values.reduce(0) { $0 + $1.count }
+            let totalExternal = self.externalConsumers.values.reduce(0) { $0 + $1.count }
+            if totalBuiltIn + totalExternal == 0 && self.session.isRunning {
+                self.session.stopRunning()
+            }
+        }
+    }
+
+    func latestBuffer(forUniqueID uniqueID: String) -> CVPixelBuffer? {
+        lock.lock(); defer { lock.unlock() }
+        return externalLatestBuffers[uniqueID]
+    }
+
+    private func attachExternalInputIfNeeded(uniqueID: String) {
+        if externalInputs[uniqueID] != nil { return }
+
+        // Look the device up fresh — discoveredDevices may have changed
+        // since the user picked it (hot-plug). If the device disappeared,
+        // we silently bail; the source stays inactive until reconnect.
+        let device: AVCaptureDevice? = {
+            var types: [AVCaptureDevice.DeviceType] = [.external]
+            if #available(iOS 17.0, macCatalyst 17.0, *) {
+                types.append(.continuityCamera)
+            }
+            return AVCaptureDevice.DiscoverySession(
+                deviceTypes: types, mediaType: .video, position: .unspecified
+            ).devices.first(where: { $0.uniqueID == uniqueID })
+        }()
+        guard let device = device else {
+            NSLog("[CameraHub] external device not found uniqueID=%@", uniqueID)
+            return
+        }
+
+        // Pick a multi-cam-compatible format when available so the external
+        // input can run alongside a built-in camera on iPad Pro.
+        if isMultiCamSupported,
+           let format = device.formats.first(where: { $0.isMultiCamSupported }) {
+            do {
+                try device.lockForConfiguration()
+                device.activeFormat = format
+                device.unlockForConfiguration()
+            } catch {
+                NSLog("[CameraHub] ext format lock failed: %@", error.localizedDescription)
+            }
+        }
+
+        let input: AVCaptureDeviceInput
+        do {
+            input = try AVCaptureDeviceInput(device: device)
+        } catch {
+            NSLog("[CameraHub] ext input err: %@", error.localizedDescription)
+            return
+        }
+
+        let output = AVCaptureVideoDataOutput()
+        output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+        output.alwaysDiscardsLateVideoFrames = true
+        output.setSampleBufferDelegate(self, queue: queue)
+
+        session.beginConfiguration()
+        guard session.canAddInput(input) else {
+            NSLog("[CameraHub] ext canAddInput false uniqueID=%@", uniqueID)
+            session.commitConfiguration()
+            return
+        }
+        session.addInput(input)
+        guard session.canAddOutput(output) else {
+            NSLog("[CameraHub] ext canAddOutput false uniqueID=%@", uniqueID)
+            session.removeInput(input)
+            session.commitConfiguration()
+            return
+        }
+        session.addOutput(output)
+        session.commitConfiguration()
+
+        externalInputs[uniqueID] = input
+        externalOutputs[uniqueID] = output
+        NSLog("[CameraHub] attached external %@ uniqueID=%@", device.localizedName, uniqueID)
+    }
+
+    private func detachExternalInput(uniqueID: String) {
+        session.beginConfiguration()
+        if let input = externalInputs[uniqueID] {
+            session.removeInput(input)
+            externalInputs.removeValue(forKey: uniqueID)
+        }
+        if let output = externalOutputs[uniqueID] {
+            session.removeOutput(output)
+            externalOutputs.removeValue(forKey: uniqueID)
+        }
+        session.commitConfiguration()
+        lock.lock()
+        externalLatestBuffers.removeValue(forKey: uniqueID)
+        lock.unlock()
+    }
+
     /// Re-attach any per-position inputs that were detached during a previous
     /// background cycle (single-cam fallback path), then re-start the session.
     /// Called from `RenderEngine.resumeForForeground()`.
@@ -129,7 +325,13 @@ final class CameraHub: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
                     self.attachInputIfNeeded(position: position)
                 }
             }
+            for (uid, hashTable) in self.externalConsumers where hashTable.count > 0 {
+                if self.externalInputs[uid] == nil {
+                    self.attachExternalInputIfNeeded(uniqueID: uid)
+                }
+            }
             let total = self.consumers.values.reduce(0) { $0 + $1.count }
+                      + self.externalConsumers.values.reduce(0) { $0 + $1.count }
             if total > 0 && !self.session.isRunning {
                 self.session.startRunning()
             }
@@ -300,16 +502,22 @@ final class CameraHub: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
                        didOutput sampleBuffer: CMSampleBuffer,
                        from connection: AVCaptureConnection) {
         guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        // Resolve which position this output belongs to.
-        var position: AVCaptureDevice.Position = .unspecified
-        for (pos, out) in outputs {
-            if out === output { position = pos; break }
+        // Resolve which input this output belongs to. First check the
+        // built-in (position-keyed) outputs, then the external (uniqueID-
+        // keyed) outputs. Each AVCaptureVideoDataOutput is unique so the
+        // first match wins.
+        for (pos, out) in outputs where out === output {
+            lock.lock()
+            latestBuffers[pos] = pb
+            lock.unlock()
+            return
         }
-        guard position != .unspecified else { return }
-
-        lock.lock()
-        latestBuffers[position] = pb
-        lock.unlock()
+        for (uid, out) in externalOutputs where out === output {
+            lock.lock()
+            externalLatestBuffers[uid] = pb
+            lock.unlock()
+            return
+        }
     }
 
     // MARK: - Notifications
@@ -329,6 +537,7 @@ final class CameraHub: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
             guard let self = self else { return }
             // Only restart if there's still at least one consumer.
             let total = self.consumers.values.reduce(0) { $0 + $1.count }
+                      + self.externalConsumers.values.reduce(0) { $0 + $1.count }
             if total > 0 && !self.session.isRunning {
                 self.session.startRunning()
             }

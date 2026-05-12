@@ -177,12 +177,7 @@ final class ChannelRenderer {
         enc.setVertexBuffer(ctx.quadVertexBuffer, offset: 0, index: 0)
         enc.setFragmentTexture(input, index: 0)
 
-        var params = EffectUniforms(
-            param1: channel.effectIntensity,
-            param2: channel.effectParam2,
-            time: Self.sessionTime,
-            padding: 0
-        )
+        var params = effectUniforms(input: input)
         enc.setFragmentBytes(&params, length: MemoryLayout<EffectUniforms>.size, index: 0)
         enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
         enc.endEncoding()
@@ -211,12 +206,7 @@ final class ChannelRenderer {
         enc.setFragmentTexture(input, index: 0)    // current frame
         enc.setFragmentTexture(readTex, index: 1)   // previous feedback
 
-        var params = EffectUniforms(
-            param1: channel.effectIntensity,
-            param2: channel.effectParam2,
-            time: Self.sessionTime,
-            padding: 0
-        )
+        var params = effectUniforms(input: input)
         enc.setFragmentBytes(&params, length: MemoryLayout<EffectUniforms>.size, index: 0)
         enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
         enc.endEncoding()
@@ -310,10 +300,13 @@ final class ChannelRenderer {
         var params = EffectUniforms(
             param1: channel.keySettings.threshold,
             param2: channel.keySettings.softness,
+            // param3 doubles as the invert flag for luma/chroma key shaders.
+            param3: channel.keySettings.invert ? 1 : 0,
+            param4: 0, param5: 0, param6: 0,
+            // `time` slot carries keyHue for the chroma key shader (the key
+            // shaders don't need a real animation clock).
             time: channel.keySettings.keyHue,
-            // Repurposed `padding` slot — carries the invert flag for the
-            // luma + chroma key shaders. Other effect shaders ignore it.
-            padding: channel.keySettings.invert ? 1 : 0
+            aspect: Float(input.width) / Float(input.height)
         )
         enc.setFragmentBytes(&params, length: MemoryLayout<EffectUniforms>.size, index: 0)
         enc.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
@@ -322,6 +315,23 @@ final class ChannelRenderer {
     }
 
     // MARK: - Helpers
+
+    /// Build the per-effect uniform from the channel's current parameter
+    /// state. Effects use as many of the 6 slots as their `paramSpecs`
+    /// declare; unused slots ride along as 0.
+    private func effectUniforms(input: MTLTexture) -> EffectUniforms {
+        let extras = channel.effectExtraParams
+        return EffectUniforms(
+            param1: channel.effectIntensity,
+            param2: channel.effectParam2,
+            param3: extras.count > 0 ? extras[0] : 0,
+            param4: extras.count > 1 ? extras[1] : 0,
+            param5: extras.count > 2 ? extras[2] : 0,
+            param6: extras.count > 3 ? extras[3] : 0,
+            time: Self.sessionTime,
+            aspect: Float(input.width) / Float(input.height)
+        )
+    }
 
     private func ensureTexture(_ existing: MTLTexture?, matching ref: MTLTexture) -> MTLTexture? {
         if let tex = existing, tex.width == ref.width, tex.height == ref.height {

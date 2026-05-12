@@ -141,11 +141,15 @@ final class MetalContext {
 
         // Effect pipelines
         let effectNames = ["effect_mirror_h", "effect_mirror_v", "effect_invert",
-                           "effect_mosaic", "effect_strobe", "effect_rgb_split",
+                           "effect_mosaic", "effect_strobe",
                            "effect_posterize", "effect_blur", "effect_solarize",
                            "effect_edges", "effect_datamosh", "effect_scanlines",
                            "effect_kaleidoscope", "effect_halftone", "effect_feedback",
-                           "effect_rotate"]
+                           "effect_rotate",
+                           // Chromatose-inspired distortion family
+                           "effect_wave", "effect_tunnel", "effect_channels",
+                           "effect_displace",
+                           "effect_thermal"]
         for name in effectNames {
             effectPipelines[name] = Self.makePipeline(
                 device: device, library: library,

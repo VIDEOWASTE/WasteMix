@@ -10,6 +10,8 @@
     <true/>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>WasteMix needs access to your photo library to import videos and images as mixing sources.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>WasteMix saves recorded program-output videos to your photo library.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>WasteMix uses the microphone for audio-reactive visuals that respond to music in real-time.</string>
     <key>NSLocalNetworkUsageDescription</key>

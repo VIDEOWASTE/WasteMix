@@ -70,6 +70,9 @@
 		A10102 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10102 /* AboutView.swift */; };
 		A10103 /* ExternalDisplayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10103 /* ExternalDisplayController.swift */; };
 		A10110 /* AudioVisualizerSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10110 /* AudioVisualizerSource.swift */; };
+		A10120 /* ClipLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10120 /* ClipLibrary.swift */; };
+		A10121 /* MediaCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10121 /* MediaCenterView.swift */; };
+		A10122 /* ExternalCameraSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10122 /* ExternalCameraSource.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -140,6 +143,9 @@
 		B10102 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		B10103 /* ExternalDisplayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalDisplayController.swift; sourceTree = "<group>"; };
 		B10110 /* AudioVisualizerSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioVisualizerSource.swift; sourceTree = "<group>"; };
+		B10120 /* ClipLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipLibrary.swift; sourceTree = "<group>"; };
+		B10121 /* MediaCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCenterView.swift; sourceTree = "<group>"; };
+		B10122 /* ExternalCameraSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalCameraSource.swift; sourceTree = "<group>"; };
 		C10000 /* WasteMix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WasteMix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -192,6 +198,7 @@
 				B10043 /* MixerPreset.swift */,
 				B10051 /* LFO.swift */,
 				B10057 /* OutputConfig.swift */,
+				B10120 /* ClipLibrary.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -229,6 +236,7 @@
 				B10018 /* FrameProvider.swift */,
 				B10019 /* CameraSource.swift */,
 				B10100 /* CameraHub.swift */,
+				B10122 /* ExternalCameraSource.swift */,
 				B10020 /* MediaPlayerSource.swift */,
 				B10021 /* ImageSource.swift */,
 				B10022 /* PatternGeneratorSource.swift */,
@@ -263,6 +271,7 @@
 				B10052 /* LFOView.swift */,
 				B10060 /* AdvancedOutputView.swift */,
 				B10062 /* OutputDisplayView.swift */,
+				B10121 /* MediaCenterView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -418,6 +427,7 @@
 				A10018 /* FrameProvider.swift in Sources */,
 				A10019 /* CameraSource.swift in Sources */,
 				A10100 /* CameraHub.swift in Sources */,
+				A10122 /* ExternalCameraSource.swift in Sources */,
 				A10020 /* MediaPlayerSource.swift in Sources */,
 				A10021 /* ImageSource.swift in Sources */,
 				A10022 /* PatternGeneratorSource.swift in Sources */,
@@ -459,6 +469,8 @@
 				A10056 /* AdvancedOutputView.swift in Sources */,
 				A10057 /* DisplayManager.swift in Sources */,
 				A10058 /* OutputDisplayView.swift in Sources */,
+				A10120 /* ClipLibrary.swift in Sources */,
+				A10121 /* MediaCenterView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -586,7 +598,7 @@
 				CODE_SIGN_ENTITLEMENTS = QuadMix/Resources/WasteMix.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = JT6H6DDP3S;
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = (
@@ -644,7 +656,7 @@
 				CODE_SIGN_ENTITLEMENTS = QuadMix/Resources/WasteMix.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = JT6H6DDP3S;
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = (

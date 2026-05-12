@@ -1,6 +1,8 @@
 import Metal
 import MetalKit
 import QuartzCore
+import AVFoundation
+import Photos
 
 /// Weak proxy so CADisplayLink doesn't retain RenderEngine (CADisplayLink
 /// retains its target — without this we'd leak the engine forever).
@@ -16,6 +18,8 @@ final class RenderEngine: NSObject {
     let audioEngine = AudioEngine()
     let outputRenderer = OutputRenderer()
     let displayManager = DisplayManager()
+    let clipLibrary = ClipLibrary()
+    lazy var recorder: ProgramRecorder = ProgramRecorder(clipLibrary: clipLibrary)
 
     private let ctx = MetalContext.shared
     private let compositorPipeline = CompositorPipeline()
@@ -184,6 +188,11 @@ final class RenderEngine: NSObject {
             commandBuffer: commandBuffer
         )
 
+        // Capture this frame for the program recorder if active. Sits AFTER
+        // the compositor's writes have been encoded so the captured pixel
+        // buffer reflects the same image PVW/PGM/HDMI/NDI just rendered.
+        recorder.captureFrame(programTexture, commandBuffer: commandBuffer)
+
         commandBuffer.commit()
 
         // Flush texture cache to release stale CVMetalTexture mappings
@@ -272,6 +281,212 @@ final class RenderEngine: NSObject {
                 channel.effectIntensity = smoothed
             case .none:
                 break
+            }
+        }
+    }
+}
+
+// MARK: - Program Recorder
+
+/// Records `RenderEngine.programTexture` to an .mp4 in the Photos library.
+/// Encoded via AVAssetWriter; each display tick we blit the live program
+/// texture into the writer's pixel buffer pool, then append. GPU work runs
+/// async (no `waitUntilCompleted`) so the display link doesn't stall.
+@Observable
+final class ProgramRecorder {
+    private(set) var isRecording = false
+    private(set) var elapsedSeconds: Double = 0
+    private(set) var lastSavedURL: URL?
+    private(set) var lastError: String?
+
+    private var writer: AVAssetWriter?
+    private var input: AVAssetWriterInput?
+    private var adaptor: AVAssetWriterInputPixelBufferAdaptor?
+    private var startedAt: CFTimeInterval = 0
+    private var outputURL: URL?
+    private var textureCache: CVMetalTextureCache?
+    /// Frame-pacing: don't append faster than ~30fps even if the display link
+    /// runs at 60. Big files + needless GPU/encoder work otherwise.
+    private var lastFrameTime: CFTimeInterval = 0
+    private let minFrameInterval: CFTimeInterval = 1.0 / 60.0
+
+    /// Library that owns the on-disk clip collection. The recorder
+    /// writes directly into its directory and registers each finished
+    /// clip so it auto-populates the Media Center.
+    private weak var clipLibrary: ClipLibrary?
+
+    init(clipLibrary: ClipLibrary? = nil) {
+        self.clipLibrary = clipLibrary
+        var cache: CVMetalTextureCache?
+        CVMetalTextureCacheCreate(kCFAllocatorDefault, nil,
+                                  MetalContext.shared.device, nil, &cache)
+        self.textureCache = cache
+    }
+
+    // MARK: Public
+
+    func toggle() {
+        if isRecording { stop() } else { start() }
+    }
+
+    func captureFrame(_ texture: MTLTexture, commandBuffer: MTLCommandBuffer) {
+        guard isRecording,
+              let adaptor = adaptor,
+              let pool = adaptor.pixelBufferPool,
+              let input = input, input.isReadyForMoreMediaData,
+              let textureCache = textureCache else { return }
+
+        let now = CACurrentMediaTime()
+        if now - lastFrameTime < minFrameInterval { return }
+        lastFrameTime = now
+
+        var pb: CVPixelBuffer?
+        guard CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &pb) == kCVReturnSuccess,
+              let pixelBuffer = pb else { return }
+
+        var cvTex: CVMetalTexture?
+        let r = CVMetalTextureCacheCreateTextureFromImage(
+            kCFAllocatorDefault, textureCache, pixelBuffer, nil,
+            .bgra8Unorm,
+            CVPixelBufferGetWidth(pixelBuffer),
+            CVPixelBufferGetHeight(pixelBuffer),
+            0, &cvTex
+        )
+        guard r == kCVReturnSuccess, let cv = cvTex,
+              let dst = CVMetalTextureGetTexture(cv),
+              let blit = commandBuffer.makeBlitCommandEncoder() else { return }
+
+        blit.copy(from: texture, sourceSlice: 0, sourceLevel: 0,
+                  sourceOrigin: MTLOrigin(),
+                  sourceSize: MTLSize(width: texture.width, height: texture.height, depth: 1),
+                  to: dst, destinationSlice: 0, destinationLevel: 0,
+                  destinationOrigin: MTLOrigin())
+        blit.endEncoding()
+
+        let pts = CMTime(seconds: now - startedAt, preferredTimescale: 600)
+        // Capture pixelBuffer + cvTex via the command buffer's completion so
+        // the GPU has finished writing before the encoder reads it. Holding
+        // `cv` keeps the CVMetalTexture alive until the GPU is done.
+        let snapshot = (pixelBuffer, cv)
+        commandBuffer.addCompletedHandler { [weak self] _ in
+            _ = snapshot.1   // keep alive until GPU completes
+            DispatchQueue.main.async {
+                guard let self = self, self.isRecording, let adaptor = self.adaptor else { return }
+                if adaptor.assetWriterInput.isReadyForMoreMediaData {
+                    adaptor.append(snapshot.0, withPresentationTime: pts)
+                }
+                self.elapsedSeconds = CACurrentMediaTime() - self.startedAt
+            }
+        }
+    }
+
+    // MARK: Private
+
+    private func start() {
+        // Write straight into the ClipLibrary directory so finished
+        // recordings auto-populate the Media Center. Fall back to the
+        // temp directory if no library is wired up (shouldn't happen
+        // in normal use, but keeps the recorder standalone-testable).
+        let url: URL
+        if let lib = clipLibrary {
+            url = lib.newRecordingURL()
+        } else {
+            let fileName = "WasteMix_\(Int(Date().timeIntervalSince1970)).mp4"
+            url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        }
+        try? FileManager.default.removeItem(at: url)
+
+        let w = Constants.defaultWidth
+        let h = Constants.defaultHeight
+
+        do {
+            let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+            let settings: [String: Any] = [
+                AVVideoCodecKey: AVVideoCodecType.h264,
+                AVVideoWidthKey: w,
+                AVVideoHeightKey: h,
+                AVVideoCompressionPropertiesKey: [
+                    AVVideoAverageBitRateKey: 12_000_000,
+                    AVVideoExpectedSourceFrameRateKey: 60,
+                    AVVideoMaxKeyFrameIntervalKey: 60
+                ]
+            ]
+            let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
+            input.expectsMediaDataInRealTime = true
+            let adaptor = AVAssetWriterInputPixelBufferAdaptor(
+                assetWriterInput: input,
+                sourcePixelBufferAttributes: [
+                    kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+                    kCVPixelBufferWidthKey as String: w,
+                    kCVPixelBufferHeightKey as String: h,
+                    kCVPixelBufferMetalCompatibilityKey as String: true
+                ]
+            )
+            guard writer.canAdd(input) else {
+                lastError = "writer can't accept video input"
+                return
+            }
+            writer.add(input)
+            guard writer.startWriting() else {
+                lastError = writer.error?.localizedDescription ?? "writer.startWriting failed"
+                return
+            }
+            writer.startSession(atSourceTime: .zero)
+
+            self.writer = writer
+            self.input = input
+            self.adaptor = adaptor
+            self.outputURL = url
+            self.startedAt = CACurrentMediaTime()
+            self.elapsedSeconds = 0
+            self.lastError = nil
+            self.isRecording = true
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    private func stop() {
+        guard let writer = writer, let input = input, let url = outputURL else {
+            isRecording = false
+            return
+        }
+        isRecording = false
+        input.markAsFinished()
+        writer.finishWriting { [weak self] in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                self.lastSavedURL = url
+                self.clipLibrary?.registerRecording(at: url)
+                self.saveToPhotos(url: url)
+                self.writer = nil
+                self.input = nil
+                self.adaptor = nil
+                self.outputURL = nil
+            }
+        }
+    }
+
+    private func saveToPhotos(url: URL) {
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            guard status == .authorized || status == .limited else {
+                DispatchQueue.main.async {
+                    self.lastError = "Photos permission denied — file saved to \(url.path)"
+                }
+                return
+            }
+            PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
+            } completionHandler: { ok, err in
+                DispatchQueue.main.async {
+                    if !ok {
+                        self.lastError = err?.localizedDescription ?? "save failed"
+                    } else {
+                        self.lastError = nil
+                    }
+                    // Don't delete — the file is the canonical clip in
+                    // the Media Center library now. Photos has its own copy.
+                }
             }
         }
     }

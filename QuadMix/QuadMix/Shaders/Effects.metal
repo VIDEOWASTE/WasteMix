@@ -8,11 +8,18 @@ struct VertexOut {
     float2 texCoord;
 };
 
+// Mirror of Swift `EffectUniforms`. Six generic param slots, then time +
+// aspect. Effects that only need 1-2 knobs ignore the rest.
+// param3 doubles as the invert flag for the luma/chroma key shaders.
 struct EffectParams {
-    float param1;  // intensity 0-1
-    float param2;  // secondary
-    float time;    // animation time
-    float padding;
+    float param1;
+    float param2;
+    float param3;
+    float param4;
+    float param5;
+    float param6;
+    float time;
+    float aspect;
 };
 
 // MARK: - Rotate (discrete 90° steps via UV remap)
@@ -88,19 +95,6 @@ fragment float4 effect_strobe(VertexOut in [[stage_in]],
     float duty = mix(0.5, 0.9, p.param2);
     float flash = step(duty, fract(p.time * rate));
     return float4(c.rgb * flash, c.a);
-}
-
-// MARK: - RGB Split (param1 = horizontal offset, param2 = vertical offset)
-fragment float4 effect_rgb_split(VertexOut in [[stage_in]],
-                                  texture2d<float> tex [[texture(0)]],
-                                  constant EffectParams &p [[buffer(0)]]) {
-    constexpr sampler s(filter::linear, address::clamp_to_edge);
-    float hOff = p.param1 * 0.08;
-    float vOff = p.param2 * 0.08;
-    float r = tex.sample(s, in.texCoord + float2(hOff, vOff)).r;
-    float g = tex.sample(s, in.texCoord).g;
-    float b = tex.sample(s, in.texCoord - float2(hOff, vOff)).b;
-    return float4(r, g, b, 1.0);
 }
 
 // MARK: - Posterize (wider range, more dramatic at high intensity)
@@ -336,7 +330,7 @@ fragment float4 key_luma(VertexOut in [[stage_in]],
     float4 c = tex.sample(s, in.texCoord);
     float luma = dot(c.rgb, float3(0.2126, 0.7152, 0.0722));
     float alpha = smoothstep(p.param1 - p.param2, p.param1 + p.param2, luma);
-    if (p.padding > 0.5) { alpha = 1.0 - alpha; }
+    if (p.param3 > 0.5) { alpha = 1.0 - alpha; }
     return float4(c.rgb, alpha);
 }
 
@@ -372,14 +366,20 @@ fragment float4 key_chroma(VertexOut in [[stage_in]],
     float alpha = max(mask, 1.0 - satMask);
     // padding > 0.5 means "invert": keep the keyed-out hue and knock out
     // everything else. Same flag layout as the luma key.
-    if (p.padding > 0.5) { alpha = 1.0 - alpha; }
+    if (p.param3 > 0.5) { alpha = 1.0 - alpha; }
 
     return float4(c.rgb, alpha);
 }
 
-// MARK: - Feedback (param1 = feedback amount/decay, param2 = zoom/drift)
-// Blends current frame with the previous frame's output, creating trails/echoes.
-// texture(0) = current input, texture(1) = previous feedback buffer
+// MARK: - Feedback (Chromatose-style, 6 params)
+// param1 = trail amount (persistence)
+// param2 = zoom/rotate amount
+// param3 = min luma threshold (only bright-enough pixels feed back)
+// param4 = smooth (blurs the feedback sample to soften edges)
+// param5 = input mix (how much of the current frame paints in vs pure trails)
+// param6 = tint shift (per-iteration hue rotation — rainbow trails)
+//
+// Texture(0) = current input, texture(1) = previous feedback buffer.
 fragment float4 effect_feedback(VertexOut in [[stage_in]],
                                  texture2d<float> tex [[texture(0)]],
                                  texture2d<float> prevTex [[texture(1)]],
@@ -388,11 +388,9 @@ fragment float4 effect_feedback(VertexOut in [[stage_in]],
 
     float4 current = tex.sample(s, in.texCoord);
 
-    // Subtle zoom toward center for each feedback iteration
+    // Zoom + rotation per iteration
     float zoom = 1.0 - p.param2 * 0.02;
     float2 fbUV = (in.texCoord - 0.5) * zoom + 0.5;
-
-    // Slow rotation driven by param2
     float angle = p.param2 * 0.005 * p.time;
     float2 centered = fbUV - 0.5;
     float cs = cos(angle);
@@ -400,11 +398,329 @@ fragment float4 effect_feedback(VertexOut in [[stage_in]],
     fbUV = float2(centered.x * cs - centered.y * sn,
                    centered.x * sn + centered.y * cs) + 0.5;
 
-    float4 prev = prevTex.sample(s, fbUV);
+    // Smoothed previous-frame fetch (4-tap box blur, scaled by param4)
+    float4 prev;
+    if (p.param4 > 0.01) {
+        float r = p.param4 * 0.005;
+        prev  = prevTex.sample(s, fbUV + float2( r,  r));
+        prev += prevTex.sample(s, fbUV + float2(-r,  r));
+        prev += prevTex.sample(s, fbUV + float2( r, -r));
+        prev += prevTex.sample(s, fbUV + float2(-r, -r));
+        prev *= 0.25;
+    } else {
+        prev = prevTex.sample(s, fbUV);
+    }
 
-    // param1 controls persistence: 0 = no trails, 1 = infinite trails
-    float feedbackAmount = p.param1 * 0.95;
-    float4 blended = mix(current, prev, feedbackAmount);
+    // Min-luma gate: trails persist only on pixels brighter than the
+    // threshold (param3). Below the threshold we suppress the trail's
+    // contribution so dark areas don't hold smudge. Soft ramp.
+    float lumaPrev = dot(prev.rgb, float3(0.299, 0.587, 0.114));
+    float minLuma = p.param3;
+    float lumaGate = smoothstep(minLuma, minLuma + 0.05, lumaPrev);
 
-    return float4(blended.rgb, 1.0);
+    // Tint shift — rotate the fed-back hue a touch each iteration.
+    if (p.param6 > 0.01) {
+        float hueShift = p.param6 * 0.05; // small per-frame shift
+        // Cheap approx hue rotation via a fixed RGB->RGB matrix
+        float c_h = cos(hueShift);
+        float s_h = sin(hueShift);
+        float3 rot = float3(
+            prev.r * (0.213 + 0.787 * c_h - 0.213 * s_h)
+          + prev.g * (0.715 - 0.715 * c_h - 0.715 * s_h)
+          + prev.b * (0.072 - 0.072 * c_h + 0.928 * s_h),
+            prev.r * (0.213 - 0.213 * c_h + 0.143 * s_h)
+          + prev.g * (0.715 + 0.285 * c_h + 0.140 * s_h)
+          + prev.b * (0.072 - 0.072 * c_h - 0.283 * s_h),
+            prev.r * (0.213 - 0.213 * c_h - 0.787 * s_h)
+          + prev.g * (0.715 - 0.715 * c_h + 0.715 * s_h)
+          + prev.b * (0.072 + 0.928 * c_h + 0.072 * s_h)
+        );
+        prev.rgb = rot;
+    }
+
+    float trail = p.param1 * 0.95 * lumaGate;
+    float inputMix = clamp(p.param5, 0.0, 1.0);
+    float3 fb = mix(current.rgb * inputMix, prev.rgb, trail);
+    // Always paint at least a faint copy of input so the loop doesn't fade
+    // to black if param5 is zeroed mid-performance.
+    fb = max(fb, current.rgb * 0.05);
+
+    return float4(fb, 1.0);
+}
+
+// MARK: - Wave (Chromatose-style multi-wave UV displacement)
+// param1 = amplitude (0..1 → 0..30% UV displacement)
+// param2 = frequency (0..1 → 1..30 cycles per screen)
+// param3 = speed (0..1 → 0..4 cycles per second)
+// param4 = angle (0..1 → 0..2π wave-travel direction)
+// param5 = shape (0..1 → 4 discrete shapes: sin / tri / square / saw)
+// param6 = 2nd-wave mix (adds a perpendicular wave at half the frequency)
+fragment float4 effect_wave(VertexOut in [[stage_in]],
+                             texture2d<float> tex [[texture(0)]],
+                             constant EffectParams &p [[buffer(0)]]) {
+    constexpr sampler s(filter::linear, address::clamp_to_edge);
+
+    float amp = p.param1 * 0.3;
+    float freq = mix(1.0, 30.0, p.param2);
+    float speed = p.param3 * 4.0;
+    float angle = p.param4 * 6.2831853;
+    int shape = int(round(p.param5 * 3.0));
+    float secondMix = p.param6;
+
+    float2 dir = float2(cos(angle), sin(angle));
+    float2 perp = float2(-dir.y, dir.x);
+
+    // Wave traveling along `dir`, displacing perpendicular to it.
+    float t = dot(in.texCoord - 0.5, dir) * freq + p.time * speed;
+    float w;
+    if (shape == 0)      w = sin(t * 6.2831853);
+    else if (shape == 1) w = abs(fract(t) * 2.0 - 1.0) * 2.0 - 1.0;          // triangle
+    else if (shape == 2) w = (fract(t) < 0.5) ? 1.0 : -1.0;                  // square
+    else                 w = fract(t) * 2.0 - 1.0;                           // saw
+
+    // Optional second wave perpendicular to the first
+    float w2 = 0.0;
+    if (secondMix > 0.001) {
+        float t2 = dot(in.texCoord - 0.5, perp) * freq * 0.5 + p.time * speed * 0.7;
+        w2 = sin(t2 * 6.2831853) * secondMix;
+    }
+
+    float2 disp = perp * w * amp + dir * w2 * amp;
+    return tex.sample(s, in.texCoord + disp);
+}
+
+// MARK: - Tunnel (polar warp with depth illusion)
+// param1 = zoom speed (forward movement through the tunnel)
+// param2 = twist (angular shift that grows with radius)
+// param3 = repeat count (1..8 concentric rings of the source)
+// param4 = center X (0..1, default 0.5)
+// param5 = center Y (0..1, default 0.5)
+// param6 = edge fade (vignette toward the tunnel mouth)
+fragment float4 effect_tunnel(VertexOut in [[stage_in]],
+                               texture2d<float> tex [[texture(0)]],
+                               constant EffectParams &p [[buffer(0)]]) {
+    constexpr sampler s(filter::linear, address::repeat);
+
+    float2 center = float2(p.param4, p.param5);
+    float2 d = in.texCoord - center;
+    d.x *= p.aspect;  // aspect-correct so the tunnel is round, not elliptical
+    float r = length(d);
+    float a = atan2(d.y, d.x);
+
+    float zoomSpeed = p.param2 < 0 ? p.param1 * 2.0 : p.param1 * 2.0;
+    float twist = (p.param2 - 0.5) * 6.2831853;
+    float repeats = mix(1.0, 8.0, p.param3);
+
+    // Map radius to depth: closer to center = "further away" tunnel walls
+    // moving outward as time advances → forward-flight illusion.
+    float depth = 1.0 / max(r, 1e-3);
+    float u = (a + twist * r) / 6.2831853;
+    float v = depth * 0.25 + p.time * zoomSpeed * 0.3;
+
+    float2 srcUV = float2(u * repeats, v * repeats);
+    float4 col = tex.sample(s, fract(srcUV));
+
+    // Edge fade — darken near the outer rim (small r-relative is "deep",
+    // larger r approaches the canvas edge).
+    if (p.param6 > 0.01) {
+        float fade = smoothstep(0.55, 0.05, r) * p.param6 + (1.0 - p.param6);
+        col.rgb *= fade;
+    }
+
+    return col;
+}
+
+// MARK: - Channels (per-channel UV offset at arbitrary angle)
+// param1 = distance (0..1 → 0..10% UV shift)
+// param2 = angle (0..1 → 0..2π)
+// param3 = red mix (channel intensity)
+// param4 = green mix
+// param5 = blue mix
+// param6 = smear (spreads the offset across multiple samples for a motion-blur look)
+fragment float4 effect_channels(VertexOut in [[stage_in]],
+                                 texture2d<float> tex [[texture(0)]],
+                                 constant EffectParams &p [[buffer(0)]]) {
+    constexpr sampler s(filter::linear, address::clamp_to_edge);
+
+    float dist = p.param1 * 0.1;
+    float angle = p.param2 * 6.2831853;
+    float2 dir = float2(cos(angle), sin(angle));
+    float smear = p.param6;
+
+    // Each channel offset by a fraction of `dir * dist`. Red ahead, blue
+    // behind, green centered — classic chromatic aberration along an arbitrary axis.
+    float2 uvR = in.texCoord + dir * dist;
+    float2 uvG = in.texCoord;
+    float2 uvB = in.texCoord - dir * dist;
+
+    float4 cR, cG, cB;
+    if (smear > 0.001) {
+        // 4-tap smear: average a chord of samples along the offset direction
+        float step = dist * 0.5;
+        cR = (tex.sample(s, uvR) + tex.sample(s, uvR - dir * step)
+            + tex.sample(s, uvR - dir * step * 2.0) + tex.sample(s, uvR + dir * step)) * 0.25;
+        cG = tex.sample(s, uvG);
+        cB = (tex.sample(s, uvB) + tex.sample(s, uvB + dir * step)
+            + tex.sample(s, uvB + dir * step * 2.0) + tex.sample(s, uvB - dir * step)) * 0.25;
+        // Lerp between sharp and smeared based on `smear`
+        cR = mix(tex.sample(s, uvR), cR, smear);
+        cB = mix(tex.sample(s, uvB), cB, smear);
+    } else {
+        cR = tex.sample(s, uvR);
+        cG = tex.sample(s, uvG);
+        cB = tex.sample(s, uvB);
+    }
+
+    return float4(cR.r * p.param3,
+                  cG.g * p.param4,
+                  cB.b * p.param5,
+                  1.0);
+}
+
+// MARK: - Displace (value-noise UV displacement)
+// Cheap 2D value noise (hash + bilinear) → displaces UV → liquid-like warp.
+// param1 = amount (0..1 → 0..15% displacement)
+// param2 = noise scale (0..1 → 1..16 cells per screen)
+// param3 = speed (animation rate)
+// param4 = channel separation (R/G/B sampled at slightly different offsets)
+// param5 = octaves (0..1 → 1..4 fractal octaves)
+// param6 = direction bias (0 = isotropic, 1 = horizontal-only)
+static inline float hash21(float2 p) {
+    p = fract(p * float2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return fract(p.x * p.y);
+}
+
+static inline float valueNoise(float2 p) {
+    float2 i = floor(p);
+    float2 f = fract(p);
+    float2 u = f * f * (3.0 - 2.0 * f);     // smoothstep
+    float a = hash21(i);
+    float b = hash21(i + float2(1.0, 0.0));
+    float c = hash21(i + float2(0.0, 1.0));
+    float d = hash21(i + float2(1.0, 1.0));
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+fragment float4 effect_displace(VertexOut in [[stage_in]],
+                                 texture2d<float> tex [[texture(0)]],
+                                 constant EffectParams &p [[buffer(0)]]) {
+    constexpr sampler s(filter::linear, address::clamp_to_edge);
+
+    float amp = p.param1 * 0.15;
+    float scale = mix(1.0, 16.0, p.param2);
+    float speed = p.param3 * 0.5;
+    float chanSep = p.param4 * 0.3;
+    int octaves = int(round(mix(1.0, 4.0, p.param5)));
+    float dirBias = p.param6;
+
+    // Fractal value noise → 2D displacement vector
+    float2 q = in.texCoord * scale + p.time * speed;
+    float nx = 0.0, ny = 0.0, ampSum = 0.0, w = 1.0;
+    for (int i = 0; i < octaves; ++i) {
+        nx += valueNoise(q) * w;
+        ny += valueNoise(q + float2(31.4, 17.7)) * w;
+        ampSum += w;
+        q *= 2.0;
+        w *= 0.5;
+    }
+    nx = (nx / ampSum) * 2.0 - 1.0;
+    ny = (ny / ampSum) * 2.0 - 1.0;
+    // Direction bias: 0 = full 2D, 1 = horizontal-only
+    ny *= (1.0 - dirBias);
+    float2 disp = float2(nx, ny) * amp;
+
+    if (chanSep > 0.001) {
+        float4 cR = tex.sample(s, in.texCoord + disp * (1.0 + chanSep));
+        float4 cG = tex.sample(s, in.texCoord + disp);
+        float4 cB = tex.sample(s, in.texCoord + disp * (1.0 - chanSep));
+        return float4(cR.r, cG.g, cB.b, 1.0);
+    }
+    return tex.sample(s, in.texCoord + disp);
+}
+
+// MARK: - Thermal (FLIR-style false-color heat map)
+// param1 = INTENSITY (mix between original and thermal)
+// param2 = PALETTE   (0 = Iron, 0.5 = Rainbow/Jet, 1 = White-hot)
+// param3 = CONTRAST  (heat curve — 0.5 neutral, <0.5 lifts cold, >0.5 crushes cold)
+// param4 = NOISE     (sensor grain)
+// param5 = SCAN      (faint horizontal scanline overlay, FLIR display feel)
+//
+// Maps perceptual luminance to a 5-stop palette using smooth 0..1 ramps.
+// Three palettes are blended via PALETTE so a single knob crossfades the
+// look from classic Iron through Rainbow to clinical White-hot.
+
+static inline float3 ironLUT(float t) {
+    // Black -> deep purple -> red -> orange -> yellow -> white (FLIR Iron).
+    float3 c0 = float3(0.0, 0.0, 0.0);
+    float3 c1 = float3(0.20, 0.00, 0.40);
+    float3 c2 = float3(0.85, 0.10, 0.10);
+    float3 c3 = float3(1.00, 0.55, 0.05);
+    float3 c4 = float3(1.00, 0.95, 0.30);
+    float3 c5 = float3(1.00, 1.00, 1.00);
+    if (t < 0.20) return mix(c0, c1, t / 0.20);
+    if (t < 0.45) return mix(c1, c2, (t - 0.20) / 0.25);
+    if (t < 0.70) return mix(c2, c3, (t - 0.45) / 0.25);
+    if (t < 0.90) return mix(c3, c4, (t - 0.70) / 0.20);
+    return mix(c4, c5, (t - 0.90) / 0.10);
+}
+
+static inline float3 rainbowLUT(float t) {
+    // Cold blue -> cyan -> green -> yellow -> red (jet/turbo flavor).
+    float3 c0 = float3(0.05, 0.00, 0.35);
+    float3 c1 = float3(0.00, 0.55, 0.95);
+    float3 c2 = float3(0.05, 0.90, 0.30);
+    float3 c3 = float3(0.95, 0.95, 0.05);
+    float3 c4 = float3(0.95, 0.05, 0.05);
+    if (t < 0.25) return mix(c0, c1, t / 0.25);
+    if (t < 0.50) return mix(c1, c2, (t - 0.25) / 0.25);
+    if (t < 0.75) return mix(c2, c3, (t - 0.50) / 0.25);
+    return mix(c3, c4, (t - 0.75) / 0.25);
+}
+
+// Hash for grain — cheap, branchless, no texture lookup.
+static inline float thermalHash(float2 p) {
+    return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
+}
+
+fragment float4 effect_thermal(VertexOut in [[stage_in]],
+                                texture2d<float> tex [[texture(0)]],
+                                constant EffectParams &p [[buffer(0)]]) {
+    constexpr sampler s(filter::linear, address::clamp_to_edge);
+    float4 c = tex.sample(s, in.texCoord);
+
+    // Perceptual luminance (Rec. 709). Thermal cameras key off intensity,
+    // so the source's color is collapsed to a single heat value.
+    float lum = dot(c.rgb, float3(0.2126, 0.7152, 0.0722));
+
+    // CONTRAST shapes the heat curve. 0.5 = neutral (gamma 1.0); below
+    // lifts cold detail (gamma <1), above crushes it (gamma >1).
+    float gamma = mix(0.4, 2.5, p.param3);
+    float heat = pow(clamp(lum, 0.0, 1.0), gamma);
+
+    // PALETTE crossfade: Iron <-> Rainbow <-> White-hot.
+    float3 ironCol = ironLUT(heat);
+    float3 rainCol = rainbowLUT(heat);
+    float3 whiteCol = float3(heat); // monochrome white-hot
+    float3 paletteCol;
+    if (p.param2 < 0.5) {
+        paletteCol = mix(ironCol, rainCol, p.param2 * 2.0);
+    } else {
+        paletteCol = mix(rainCol, whiteCol, (p.param2 - 0.5) * 2.0);
+    }
+
+    // Sensor grain — temporal noise that animates with `time` so it
+    // doesn't look like a static dither pattern.
+    float n = thermalHash(in.texCoord * float2(1920.0, 1080.0) + p.time * 73.0) - 0.5;
+    paletteCol += n * p.param4 * 0.25;
+
+    // FLIR-style display scanline — fine horizontal banding that gets
+    // stronger with SCAN.
+    float scan = 1.0 - p.param5 * 0.35 * (0.5 + 0.5 * sin(in.texCoord.y * 1080.0 * 3.14159));
+    paletteCol *= scan;
+
+    // INTENSITY — blend back toward the original so the user can dial in
+    // a partial false-color treatment for layered looks.
+    float3 outRGB = mix(c.rgb, clamp(paletteCol, 0.0, 1.0), p.param1);
+    return float4(outRGB, c.a);
 }

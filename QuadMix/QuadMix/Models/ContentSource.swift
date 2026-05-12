@@ -240,6 +240,12 @@ enum EnvelopeBand: Int, CaseIterable {
 
 enum ContentSource: Identifiable {
     case camera(position: AVCaptureDevice.Position)
+    /// External / UVC capture device (HDMI capture card, USB webcam, Studio
+    /// Display camera, etc.). Identified by `uniqueID` so multiple cards on
+    /// the same hub can be addressed independently. `displayName` is cached
+    /// at selection time so the channel chip shows something useful even
+    /// while the device is briefly unplugged.
+    case externalCamera(uniqueID: String, displayName: String)
     case mediaFile(url: URL)
     case image(url: URL)
     case solidColor(red: Float, green: Float, blue: Float)
@@ -251,6 +257,8 @@ enum ContentSource: Identifiable {
         switch self {
         case .camera(let pos):
             return "camera_\(pos.rawValue)"
+        case .externalCamera(let uid, _):
+            return "ext_\(uid)"
         case .mediaFile(let url):
             return "media_\(url.lastPathComponent)"
         case .image(let url):
@@ -270,6 +278,8 @@ enum ContentSource: Identifiable {
         switch self {
         case .camera(let pos):
             return pos == .front ? "Front Camera" : "Back Camera"
+        case .externalCamera(_, let name):
+            return name
         case .mediaFile(let url):
             return url.lastPathComponent
         case .image(let url):
@@ -282,6 +292,16 @@ enum ContentSource: Identifiable {
             return "NDI: \(name)"
         case .audioVisualizer(let style):
             return "Audio: \(style.displayName)"
+        }
+    }
+
+    /// True for live-capture sources — built-in cameras and external/UVC
+    /// devices. Used by the channel detail panel to decide whether to
+    /// show the framing (rotation / fit) controls.
+    var isCameraLike: Bool {
+        switch self {
+        case .camera, .externalCamera: return true
+        default: return false
         }
     }
 }

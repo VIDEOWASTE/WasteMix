@@ -9,7 +9,6 @@ enum EffectType: String, CaseIterable, Identifiable, Codable {
     case invert
     case mosaic
     case strobe
-    case rgbSplit
     case posterize
     case blur
     case solarize
@@ -19,6 +18,12 @@ enum EffectType: String, CaseIterable, Identifiable, Codable {
     case kaleidoscope
     case halftone
     case feedback
+    // Chromatose-inspired distortion family
+    case wave
+    case tunnel
+    case channels
+    case displace
+    case thermal
 
     var id: String { rawValue }
 
@@ -32,7 +37,6 @@ enum EffectType: String, CaseIterable, Identifiable, Codable {
         case .invert: return "Invert"
         case .mosaic: return "Mosaic"
         case .strobe: return "Strobe"
-        case .rgbSplit: return "RGB Split"
         case .posterize: return "Posterize"
         case .blur: return "Blur"
         case .solarize: return "Solarize"
@@ -42,6 +46,11 @@ enum EffectType: String, CaseIterable, Identifiable, Codable {
         case .kaleidoscope: return "Kaleido"
         case .halftone: return "Halftone"
         case .feedback: return "Feedback"
+        case .wave: return "Wave"
+        case .tunnel: return "Tunnel"
+        case .channels: return "Channels"
+        case .displace: return "Displace"
+        case .thermal: return "Thermal"
         }
     }
 
@@ -55,7 +64,6 @@ enum EffectType: String, CaseIterable, Identifiable, Codable {
         case .invert: return "circle.lefthalf.filled"
         case .mosaic: return "square.grid.3x3"
         case .strobe: return "bolt.fill"
-        case .rgbSplit: return "camera.filters"
         case .posterize: return "paintbrush"
         case .blur: return "drop.halffull"
         case .solarize: return "sun.max.trianglebadge.exclamationmark"
@@ -65,6 +73,11 @@ enum EffectType: String, CaseIterable, Identifiable, Codable {
         case .kaleidoscope: return "star.leadinghalf.filled"
         case .halftone: return "circle.dotted"
         case .feedback: return "arrow.2.squarepath"
+        case .wave: return "wave.3.right"
+        case .tunnel: return "circle.circle"
+        case .channels: return "rectangle.split.3x1"
+        case .displace: return "waveform.path.ecg"
+        case .thermal: return "thermometer.high"
         }
     }
 
@@ -77,7 +90,6 @@ enum EffectType: String, CaseIterable, Identifiable, Codable {
         case .invert: return "effect_invert"
         case .mosaic: return "effect_mosaic"
         case .strobe: return "effect_strobe"
-        case .rgbSplit: return "effect_rgb_split"
         case .posterize: return "effect_posterize"
         case .blur: return "effect_blur"
         case .solarize: return "effect_solarize"
@@ -87,84 +99,111 @@ enum EffectType: String, CaseIterable, Identifiable, Codable {
         case .kaleidoscope: return "effect_kaleidoscope"
         case .halftone: return "effect_halftone"
         case .feedback: return "effect_feedback"
+        case .wave: return "effect_wave"
+        case .tunnel: return "effect_tunnel"
+        case .channels: return "effect_channels"
+        case .displace: return "effect_displace"
+        case .thermal: return "effect_thermal"
         }
     }
 
     var isFeedback: Bool { self == .feedback }
 
-    var param1Label: String {
+    /// Per-effect parameter list. Slot 0 → channel.effectIntensity, slot 1 →
+    /// channel.effectParam2, slots 2-5 → channel.effectExtraParams[0-3].
+    /// Length 0 means no user knobs (e.g. Mirror without an amount).
+    var paramSpecs: [EffectParamSpec] {
         switch self {
-        case .none, .freeze: return "Intensity"
-        case .rotate: return "Angle"
-        case .mirror, .mirrorV: return "Mirror Amount"
-        case .invert: return "Invert Amount"
-        case .mosaic: return "Block Size"
-        case .strobe: return "Strobe Speed"
-        case .rgbSplit: return "Split Offset"
-        case .posterize: return "Crush Amount"
-        case .blur: return "Blur Radius"
-        case .solarize: return "Threshold"
-        case .edges: return "Edge Strength"
-        case .datamosh: return "Shift Amount"
-        case .scanlines: return "Line Density"
-        case .kaleidoscope: return "Segments"
-        case .halftone: return "Dot Size"
-        case .feedback: return "Trail Amount"
+        case .none, .freeze: return []
+        case .rotate:        return [.init("ANGLE", 0.0)]
+        case .mirror:        return [.init("AMOUNT", 1.0)]
+        case .mirrorV:       return [.init("AMOUNT", 1.0)]
+        case .invert:        return [.init("AMOUNT", 1.0)]
+        case .mosaic:        return [.init("BLOCK SIZE", 0.3)]
+        case .strobe:        return [.init("SPEED", 0.4), .init("DUTY", 0.3)]
+        case .posterize:     return [.init("CRUSH", 0.4)]
+        case .blur:          return [.init("RADIUS", 0.5), .init("DIRECTION", 0.0)]
+        case .solarize:      return [.init("THRESHOLD", 0.5), .init("CURVE", 0.3)]
+        case .edges:         return [.init("STRENGTH", 0.5)]
+        case .datamosh:      return [.init("SHIFT", 0.6), .init("BLOCK H", 0.4)]
+        case .scanlines:     return [.init("DENSITY", 0.5), .init("BRIGHTNESS", 0.5)]
+        case .kaleidoscope:  return [.init("SEGMENTS", 0.3), .init("ROTATION", 0.0)]
+        case .halftone:      return [.init("DOT SIZE", 0.4)]
+        // Upgraded Feedback — full 6-param Chromatose-style control.
+        case .feedback: return [
+            .init("TRAIL", 0.7),
+            .init("ZOOM/ROT", 0.3),
+            .init("MIN LUMA", 0.0),
+            .init("SMOOTH", 0.3),
+            .init("INPUT MIX", 0.5),
+            .init("TINT", 0.0)
+        ]
+        // Wave — multi-wave UV displacement.
+        case .wave: return [
+            .init("AMPLITUDE", 0.3),
+            .init("FREQUENCY", 0.3),
+            .init("SPEED", 0.4),
+            .init("ANGLE", 0.5),
+            .init("SHAPE", 0.0),
+            .init("2ND WAVE", 0.0)
+        ]
+        // Tunnel — polar warp with depth illusion.
+        case .tunnel: return [
+            .init("ZOOM", 0.3),
+            .init("TWIST", 0.5),
+            .init("REPEAT", 0.3),
+            .init("CENTER X", 0.5),
+            .init("CENTER Y", 0.5),
+            .init("EDGE FADE", 0.2)
+        ]
+        // Channels — RGB displacement at arbitrary angle.
+        case .channels: return [
+            .init("DISTANCE", 0.3),
+            .init("ANGLE", 0.0),
+            .init("RED", 1.0),
+            .init("GREEN", 1.0),
+            .init("BLUE", 1.0),
+            .init("SMEAR", 0.0)
+        ]
+        // Displace — value-noise UV displacement.
+        case .displace: return [
+            .init("AMOUNT", 0.3),
+            .init("SCALE", 0.4),
+            .init("SPEED", 0.3),
+            .init("CHAN SEP", 0.0),
+            .init("OCTAVES", 0.3),
+            .init("DIRECTION", 0.5)
+        ]
+        // Thermal — FLIR-style false-color heat map. PALETTE crossfades
+        // Iron → Rainbow → White-hot; CONTRAST shapes the heat curve;
+        // NOISE adds sensor grain; SCAN overlays a thin display scanline.
+        case .thermal: return [
+            .init("INTENSITY", 1.0),
+            .init("PALETTE", 0.0),
+            .init("CONTRAST", 0.5),
+            .init("NOISE", 0.15),
+            .init("SCAN", 0.2)
+        ]
         }
     }
 
-    var hasParam2: Bool {
-        switch self {
-        case .rgbSplit, .blur, .strobe, .datamosh, .scanlines, .solarize, .kaleidoscope, .feedback: return true
-        default: return false
+    /// 4 default values to seed `effectExtraParams` with when this effect is
+    /// freshly selected. Pads with 0.5 if the effect uses fewer than 4 extras.
+    var defaultExtraParams: [Float] {
+        let specs = paramSpecs
+        return (0..<4).map { i in
+            let slot = i + 2
+            return slot < specs.count ? specs[slot].defaultValue : 0.5
         }
     }
 
-    var param2Label: String {
-        switch self {
-        case .rgbSplit: return "Vertical Split"
-        case .blur: return "Direction Bias"
-        case .strobe: return "Duty Cycle"
-        case .datamosh: return "Block Height"
-        case .scanlines: return "Brightness"
-        case .solarize: return "Curve"
-        case .kaleidoscope: return "Rotation"
-        case .feedback: return "Zoom/Rotate"
-        default: return ""
-        }
-    }
-
-    var defaultParam2: Float {
-        switch self {
-        case .datamosh: return 0.4
-        case .scanlines: return 0.5
-        case .strobe: return 0.3
-        case .kaleidoscope: return 0.0
-        case .solarize: return 0.3
-        case .feedback: return 0.3
-        default: return 0.0
-        }
-    }
-
-    var defaultIntensity: Float {
-        switch self {
-        case .mosaic: return 0.3
-        case .strobe: return 0.4
-        case .blur: return 0.5
-        case .rgbSplit: return 0.3
-        case .posterize: return 0.4
-        case .mirror, .mirrorV: return 1.0
-        case .invert: return 1.0
-        case .solarize: return 0.5
-        case .edges: return 0.5
-        case .datamosh: return 0.6
-        case .scanlines: return 0.5
-        case .kaleidoscope: return 0.3
-        case .halftone: return 0.4
-        case .feedback: return 0.7
-        default: return 0.5
-        }
-    }
+    // Legacy accessors — kept for callers that only need the first two
+    // params. New code should iterate `paramSpecs` directly.
+    var param1Label: String { paramSpecs.first?.label ?? "INTENSITY" }
+    var hasParam2: Bool { paramSpecs.count >= 2 }
+    var param2Label: String { paramSpecs.count >= 2 ? paramSpecs[1].label : "" }
+    var defaultParam2: Float { paramSpecs.count >= 2 ? paramSpecs[1].defaultValue : 0.0 }
+    var defaultIntensity: Float { paramSpecs.first?.defaultValue ?? 0.5 }
 }
 
 enum KeyType: String, CaseIterable, Identifiable, Codable {
@@ -211,6 +250,18 @@ struct KeySettings: Codable {
         softness = try c.decodeIfPresent(Float.self, forKey: .softness) ?? 0.1
         keyHue = try c.decodeIfPresent(Float.self, forKey: .keyHue) ?? 120.0
         invert = try c.decodeIfPresent(Bool.self, forKey: .invert) ?? false
+    }
+}
+
+/// One user-adjustable knob inside an effect. Effects expose 0-6 of these
+/// via `EffectType.paramSpecs`; the FX panel renders one slider per spec.
+struct EffectParamSpec {
+    let label: String
+    let defaultValue: Float
+
+    init(_ label: String, _ defaultValue: Float) {
+        self.label = label
+        self.defaultValue = defaultValue
     }
 }
 
@@ -311,9 +362,17 @@ struct PIPSettings: Codable {
     }
 }
 
+/// Generic per-effect uniform buffer. Six free parameter slots so each
+/// effect can choose how many it surfaces (Wave/Tunnel/etc. need 4-6;
+/// Mirror/Invert/etc. need only one). Keyed effects also stash their
+/// invert flag in `param3`.
 struct EffectUniforms {
     var param1: Float
     var param2: Float
+    var param3: Float
+    var param4: Float
+    var param5: Float
+    var param6: Float
     var time: Float
-    var padding: Float
+    var aspect: Float
 }

@@ -8,6 +8,7 @@ struct ChannelPreset: Codable {
     var effectType: EffectType
     var effectIntensity: Float
     var effectParam2: Float = 0
+    var effectExtraParams: [Float] = [0.5, 0.5, 0.5, 0.5]
     var keySettings: KeySettings
     var pipSettings: PIPSettings
     var lfo: LFOSettings = LFOSettings()
@@ -28,6 +29,10 @@ struct ChannelPreset: Codable {
         effectType = try c.decode(EffectType.self, forKey: .effectType)
         effectIntensity = try c.decode(Float.self, forKey: .effectIntensity)
         effectParam2 = try c.decodeIfPresent(Float.self, forKey: .effectParam2) ?? 0
+        effectExtraParams = try c.decodeIfPresent([Float].self, forKey: .effectExtraParams) ?? [0.5, 0.5, 0.5, 0.5]
+        // Old presets may not have all 4 slots — pad with mid-values so the
+        // shader's lookup is always safe.
+        while effectExtraParams.count < 4 { effectExtraParams.append(0.5) }
         keySettings = try c.decode(KeySettings.self, forKey: .keySettings)
         pipSettings = try c.decode(PIPSettings.self, forKey: .pipSettings)
         lfo = try c.decodeIfPresent(LFOSettings.self, forKey: .lfo) ?? LFOSettings()
@@ -39,7 +44,8 @@ struct ChannelPreset: Codable {
 
     init(faderLevel: Float, blendMode: ChannelBlendMode, colorCorrection: ColorCorrection,
          transitionConfig: TransitionConfig, effectType: EffectType, effectIntensity: Float,
-         effectParam2: Float, keySettings: KeySettings, pipSettings: PIPSettings,
+         effectParam2: Float, effectExtraParams: [Float],
+         keySettings: KeySettings, pipSettings: PIPSettings,
          lfo: LFOSettings, audioReact: AudioReactSettings, visualizerParams: VisualizerParams,
          rotation: ChannelRotation, fitMode: ChannelFitMode) {
         self.faderLevel = faderLevel
@@ -49,6 +55,7 @@ struct ChannelPreset: Codable {
         self.effectType = effectType
         self.effectIntensity = effectIntensity
         self.effectParam2 = effectParam2
+        self.effectExtraParams = effectExtraParams
         self.keySettings = keySettings
         self.pipSettings = pipSettings
         self.lfo = lfo
@@ -101,6 +108,7 @@ final class PresetManager {
                 effectType: ch.effectType,
                 effectIntensity: ch.effectIntensity,
                 effectParam2: ch.effectParam2,
+                effectExtraParams: ch.effectExtraParams,
                 keySettings: ch.keySettings,
                 pipSettings: ch.pipSettings,
                 lfo: ch.lfo,
@@ -129,6 +137,7 @@ final class PresetManager {
             ch.effectType = cp.effectType
             ch.effectIntensity = cp.effectIntensity
             ch.effectParam2 = cp.effectParam2
+            ch.effectExtraParams = cp.effectExtraParams
             ch.keySettings = cp.keySettings
             ch.pipSettings = cp.pipSettings
             ch.lfo = cp.lfo
