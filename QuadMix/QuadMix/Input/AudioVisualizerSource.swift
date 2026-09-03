@@ -104,6 +104,12 @@ final class AudioVisualizerSource: FrameProvider {
     // smoothly between values.
     private var waveformSamples: [Float] = Array(repeating: 0, count: 96)
 
+    // Oscilloscope: slow peak follower for auto-gain (keeps the trace
+    // filling the frame whether the signal is quiet or loud), plus the
+    // previous frame's drawn points for a light phosphor-trail blend.
+    private var scopePeak: Float = 0.2
+    private var scopeTrail: [CGPoint] = []
+
     // Lightning bolts in flight — generated on transient, decays per frame.
     private struct Bolt {
         var points: [CGPoint] = []
@@ -482,6 +488,8 @@ final class AudioVisualizerSource: FrameProvider {
             drawPlasmaFlow(ctx: ctx, time: scaledTime, params: params)
         case .waveform:
             drawWaveform(ctx: ctx, params: params, dt: dt)
+        case .oscilloscope:
+            drawOscilloscope(ctx: ctx, params: params, dt: dt)
         case .plasma:
             drawPlasmaFlow(ctx: ctx, time: scaledTime, params: params)
         case .orbs:
@@ -620,6 +628,125 @@ final class AudioVisualizerSource: FrameProvider {
         let pulse = CGFloat(min(1, activeLevel * 2 + 0.4))
         strokeWithGlow(ctx: ctx, path: path, color: lineColor,
                        baseWidth: 1.5 + pulse * 1.0)
+    }
+
+    // MARK: - Oscilloscope (single-line CRT scope)
+
+    /// Classic single-line oscilloscope. Traces the raw time-domain audio
+    /// signal as one continuous glowing line over a faint graticule grid.
+    /// Param mapping: HUE = trace color, INTENSITY = glow/brightness,
+    /// DENSITY = timebase (horizontal zoom — low shows the whole buffer,
+    /// high zooms into individual wave cycles), SPEED = phosphor-trail
+    /// persistence. The routed audio band drives a subtle brightness pulse.
+    private func drawOscilloscope(ctx: CGContext, params: VisualizerParams, dt: Float) {
+        let samples = audioEngine.waveform
+        let w = CGFloat(width), h = CGFloat(height)
+        let cy = h * 0.5
+
+        // Black background — phosphor reads cleanly against it.
+        ctx.setFillColor(UIColor.black.cgColor)
+        ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
+
+        // Trace color from HUE. Default (hue 0) sits at classic phosphor
+        // green; turning the knob sweeps the full wheel.
+        let hue = Double(params.hue.truncatingRemainder(dividingBy: 1.0))
+        let baseHue = (hue.isNaN ? 0.0 : hue) + 0.33   // 0.33 ≈ green
+        let intensity = CGFloat(params.intensity)
+        let traceColor = UIColor(hue: baseHue.truncatingRemainder(dividingBy: 1.0),
+                                 saturation: 0.85,
+                                 brightness: min(1, 0.75 + intensity * 0.25), alpha: 1)
+        let gridColor = UIColor(hue: baseHue.truncatingRemainder(dividingBy: 1.0),
+                                saturation: 0.6, brightness: 0.5, alpha: 1)
+
+        // --- Graticule grid: 10 horizontal × 8 vertical divisions, with a
+        // brighter center cross — the familiar scope graph-paper look.
+        ctx.setBlendMode(.normal)
+        ctx.setLineWidth(1)
+        ctx.setStrokeColor(gridColor.withAlphaComponent(0.12).cgColor)
+        ctx.beginPath()
+        for i in 1..<10 {
+            let x = w * CGFloat(i) / 10
+            ctx.move(to: CGPoint(x: x, y: 0)); ctx.addLine(to: CGPoint(x: x, y: h))
+        }
+        for i in 1..<8 {
+            let y = h * CGFloat(i) / 8
+            ctx.move(to: CGPoint(x: 0, y: y)); ctx.addLine(to: CGPoint(x: w, y: y))
+        }
+        ctx.strokePath()
+        // Center cross — slightly brighter.
+        ctx.setStrokeColor(gridColor.withAlphaComponent(0.28).cgColor)
+        ctx.beginPath()
+        ctx.move(to: CGPoint(x: 0, y: cy)); ctx.addLine(to: CGPoint(x: w, y: cy))
+        ctx.move(to: CGPoint(x: w * 0.5, y: 0)); ctx.addLine(to: CGPoint(x: w * 0.5, y: h))
+        ctx.strokePath()
+
+        guard samples.count > 16 else {
+            // No audio yet — leave the flat centerline showing.
+            return
+        }
+
+        // DENSITY = timebase: how many samples fill the screen width.
+        // Low density shows the whole buffer (zoomed out); high density
+        // shows ~128 samples (zoomed in on individual cycles).
+        let total = samples.count
+        let visible = max(128, min(total, Int(Float(total) - params.density * Float(total - 128))))
+
+        // Trigger: start the trace at the first rising zero-crossing so a
+        // steady tone appears horizontally stable instead of scrolling.
+        var startIdx = 0
+        let searchLimit = max(1, total - visible)
+        for i in 0..<min(searchLimit, total - 1) {
+            if samples[i] <= 0 && samples[i + 1] > 0 { startIdx = i; break }
+        }
+
+        // Auto-gain: slow peak follower keeps the trace filling the frame
+        // for quiet and loud signals alike. Fast attack, slow release.
+        var framePeak: Float = 0
+        for i in startIdx..<min(startIdx + visible, total) {
+            framePeak = max(framePeak, abs(samples[i]))
+        }
+        if framePeak > scopePeak {
+            scopePeak += (framePeak - scopePeak) * 0.5
+        } else {
+            scopePeak += (framePeak - scopePeak) * (1 - exp(-dt / 1.5))
+        }
+        scopePeak = max(scopePeak, 0.02)   // floor: avoids runaway gain on silence
+        let gain = min(12.0, 0.85 / scopePeak)
+        let halfAmp = h * 0.42
+
+        // Build the trace polyline.
+        let path = CGMutablePath()
+        var pts: [CGPoint] = []
+        pts.reserveCapacity(visible)
+        for i in 0..<visible {
+            let s = samples[min(startIdx + i, total - 1)]
+            let v = max(-1, min(1, s * gain))
+            let x = w * CGFloat(i) / CGFloat(visible - 1)
+            let y = cy - CGFloat(v) * halfAmp
+            pts.append(CGPoint(x: x, y: y))
+        }
+        path.move(to: pts[0])
+        for i in 1..<pts.count { path.addLine(to: pts[i]) }
+
+        // Phosphor trail: redraw last frame's trace dimly underneath.
+        // SPEED controls persistence — higher = longer-lived ghost.
+        if scopeTrail.count > 1 {
+            let trail = CGMutablePath()
+            trail.move(to: scopeTrail[0])
+            for i in 1..<scopeTrail.count { trail.addLine(to: scopeTrail[i]) }
+            let ghostAlpha = CGFloat(0.12 + params.speed * 0.4)
+            strokeWithGlow(ctx: ctx, path: trail,
+                           color: traceColor.withAlphaComponent(ghostAlpha),
+                           baseWidth: 1.2, intensity: 0.5)
+        }
+
+        // Current trace — routed band drives a brightness pulse.
+        let pulse = CGFloat(min(1, activeLevel * 2.0 + 0.5))
+        strokeWithGlow(ctx: ctx, path: path, color: traceColor,
+                       baseWidth: 1.4 + pulse * 0.8,
+                       intensity: 0.7 + intensity * 0.5)
+
+        scopeTrail = pts
     }
 
     // MARK: - Plasma: Polygons (Battery)

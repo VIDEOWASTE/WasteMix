@@ -24,6 +24,7 @@ enum PatternType: String, CaseIterable, Identifiable, Codable {
 enum VisualizerStyle: String, CaseIterable, Identifiable, Codable {
     case random         // auto-cycles through every other style on a timer + bass kicks
     case waveform
+    case oscilloscope    // single-line CRT scope tracing the raw time-domain signal
     case plasma          // multi-layer Plenoptic: layered plasma + lens flares
     case orbs            // 3+ rotating radial-gradient orbs on black, audio-driven
     case geometry        // 3D rotating polyhedra (cube, tetra, octa) with bloom edges
@@ -43,6 +44,7 @@ enum VisualizerStyle: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .random: return "Random Cycle"
         case .waveform: return "Waveform"
+        case .oscilloscope: return "Oscilloscope"
         case .plasma: return "Plenoptic"
         case .orbs: return "Orbs"
         case .geometry: return "Geometry (3D)"
@@ -62,6 +64,7 @@ enum VisualizerStyle: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .random: return "shuffle"
         case .waveform: return "waveform"
+        case .oscilloscope: return "waveform.path.ecg"
         case .plasma: return "drop.fill"
         case .orbs: return "circles.hexagongrid.fill"
         case .geometry: return "cube.fill"
@@ -85,7 +88,7 @@ enum VisualizerStyle: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .random, .plasma, .orbs, .geometry, .wmpBars, .alchemy, .polygons,
              .tunnel, .particles, .spiral, .ribbons, .lightning, .mandala: return true
-        case .waveform: return false
+        case .waveform, .oscilloscope: return false
         }
     }
 }

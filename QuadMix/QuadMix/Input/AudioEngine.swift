@@ -23,6 +23,14 @@ final class AudioEngine {
     /// Raw spectrum magnitude (0-1) for 512 bins
     private(set) var spectrum: [Float] = []
 
+    /// Raw time-domain samples from the latest audio buffer, DC-removed
+    /// but un-windowed (Hann windowing is only applied to the FFT copy).
+    /// Up to `fftSize` samples in capture order. Used by the oscilloscope
+    /// visualizer, which needs the actual signal shape rather than a
+    /// frequency-magnitude curve.
+    private(set) var waveform: [Float] = []
+    @ObservationIgnored private var waveformBuf: [Float] = []
+
     /// Pre-computed band levels (0-1), updated every audio buffer
     private(set) var subBass: Float = 0    // 20-60 Hz
     private(set) var bass: Float = 0       // 60-250 Hz
@@ -51,6 +59,7 @@ final class AudioEngine {
         var brilliance: Float = 0
         var level: Float = 0
         var spectrum: [Float] = []
+        var waveform: [Float] = []
     }
     @ObservationIgnored private let snapshotLock = NSLock()
     @ObservationIgnored private var _snapshot = BandSnapshot()
@@ -85,6 +94,7 @@ final class AudioEngine {
         realOut = [Float](repeating: 0, count: fftSize)
         imagOut = [Float](repeating: 0, count: fftSize)
         magnitudes = [Float](repeating: 0, count: fftSize / 2)
+        waveformBuf = [Float](repeating: 0, count: fftSize)
     }
 
     deinit {
@@ -245,10 +255,17 @@ final class AudioEngine {
         // every low-frequency bar at 100%.
         var dcMean: Float = 0
         vDSP_meanv(channelData, 1, &dcMean, vDSP_Length(count))
-        // Apply Hann window AND DC-correction in one pass.
-        for j in 0..<count { windowed[j] = (channelData[j] - dcMean) * window[j] }
+        // Apply Hann window AND DC-correction in one pass. Also stash the
+        // un-windowed DC-corrected sample into `waveformBuf` — the
+        // oscilloscope wants the raw signal shape, not the Hann-tapered
+        // copy (windowing would pinch the wave toward zero at both edges).
+        for j in 0..<count {
+            let s = channelData[j] - dcMean
+            waveformBuf[j] = s
+            windowed[j] = s * window[j]
+        }
         if count < fftSize {
-            for j in count..<fftSize { windowed[j] = 0 }
+            for j in count..<fftSize { windowed[j] = 0; waveformBuf[j] = 0 }
         }
 
         // FFT — reuse pre-allocated buffers; clear imaginary inputs each call.
@@ -316,6 +333,7 @@ final class AudioEngine {
         let newHigh = bandLevel(low: 4000, high: 8000)
         let newBrilliance = bandLevel(low: 8000, high: 20000)
         let newSpectrum = magnitudes
+        let newWaveform = waveformBuf
 
         // Atomic snapshot first — covers any reader that needs a coherent
         // set of bands+spectrum from one audio frame (no torn read).
@@ -323,7 +341,8 @@ final class AudioEngine {
         _snapshot = BandSnapshot(
             subBass: newSubBass, bass: newBass, lowMid: newLowMid,
             mid: newMid, highMid: newHighMid, high: newHigh,
-            brilliance: newBrilliance, level: newLevel, spectrum: newSpectrum
+            brilliance: newBrilliance, level: newLevel, spectrum: newSpectrum,
+            waveform: newWaveform
         )
         snapshotLock.unlock()
 
@@ -338,6 +357,7 @@ final class AudioEngine {
             self.high = newHigh
             self.brilliance = newBrilliance
             self.spectrum = newSpectrum
+            self.waveform = newWaveform
         }
     }
 
