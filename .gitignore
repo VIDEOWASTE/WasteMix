@@ -1,5 +1,27 @@
+# macOS
 .DS_Store
+
+# Xcode
 *.xcuserstate
-build/
 *.xcuserdatad/
+xcuserdata/
+build/
 QuadMix/build/
+DerivedData/
+*.xcarchive
+*.ipa
+
+# NDI SDK — proprietary, NOT redistributable. Install separately from https://ndi.video/
+QuadMix/QuadMix/NDI/libndi.dylib
+QuadMix/QuadMix/NDI/libndi*.dylib
+QuadMix/QuadMix/NDI/Processing.NDI.Lib.h
+**/Processing.NDI.Lib*.h
+
+# CMake (Windows port)
+WasteMixWindows/build/
+WasteMixWindows/out/
+CMakeCache.txt
+CMakeFiles/
+
+# Misc
+*.log

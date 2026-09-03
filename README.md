@@ -86,4 +86,10 @@ See `WasteMixWindows/` for the DirectX/C++ build. Requires Visual Studio 2022 wi
 
 ## License
 
-All rights reserved.
+WasteMix is open source under the [MIT License](LICENSE).
+
+**Note on NDI:** The NDI® SDK (headers and libraries from Vizrt NDI AB) is a
+proprietary dependency and is **not** included in this repository. Its license
+does not permit redistribution. To build with NDI support, download the NDI SDK
+separately from [ndi.video](https://ndi.video/) and follow the NDI Support
+instructions above. NDI® is a registered trademark of Vizrt NDI AB.
