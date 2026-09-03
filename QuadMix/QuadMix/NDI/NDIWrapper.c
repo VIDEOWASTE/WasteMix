@@ -10,8 +10,14 @@
 
 #include "NDIWrapper.h"
 #include <stddef.h>  // NULL — needed by both ENABLE_NDI and stub paths
+#include <TargetConditionals.h>  // TARGET_OS_SIMULATOR
 
-#ifdef ENABLE_NDI
+// The NDI SDK ships device (libndi_advanced_ios.a) and macOS libraries, but
+// no iOS Simulator slice — so a simulator build with ENABLE_NDI would fail to
+// link the NDIlib_* symbols. Fall back to the stub implementations there. The
+// simulator is only used for UI work / screenshots, where live NDI isn't
+// available anyway. Device and Mac/Catalyst builds are unaffected.
+#if defined(ENABLE_NDI) && !TARGET_OS_SIMULATOR
 
 #include "Processing.NDI.Lib.h"
 #include <stdint.h>
