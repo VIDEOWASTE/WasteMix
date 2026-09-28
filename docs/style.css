@@ -28,3 +28,4 @@ li { margin-bottom: 8px; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 16px 0; }
 
 footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+.shot { display: block; width: 100%; max-width: 480px; height: auto; margin: 24px auto; border-radius: 12px; border: 1px solid var(--border); }

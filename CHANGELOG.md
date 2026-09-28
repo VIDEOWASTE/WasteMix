@@ -8,22 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
-### Fixed (build 11)
-- **Status bar overlapped the Advanced Output toolbar** on iPad (clock over TFM, Wi-Fi/battery over the NDI indicator) — the window now hides the status bar like the mixer does.
+---
 
-### Removed (build 11)
-- **Syphon** output destination hidden from the Advanced Output picker — it was never implemented and Syphon doesn't exist on iPad. The enum case remains so saved configs still decode.
+## [1.0.0] — 2026-09-28
 
-### Added (build 11)
-- Debug-only `-WMDemo <scene>` launch argument that stages the mixer for App Store screenshots in the Simulator (not compiled into Release).
-
-### Fixed
-- **Master section cut off on 13" iPad in portrait** — unbounded 1pt dividers in the channel AUDIO|COLOR row and master columns stretched vertically, pushing the crossfader, tap tempo, Advanced Output, presets, REC and Media off-screen. Rows now size to their content, and the fit-to-window scale uses the measured content height instead of a hard-coded 560pt estimate.
-- **Advanced Output button stuck "open"** — state now follows the window's scene phase, so it resets when the window is backgrounded, not only when destroyed.
-- **Selected channel strip shifted down 3pt** — the header accent bar now sits in a fixed 5pt slot.
-- **Camera permission prompt at launch** — no longer requested until a camera source is picked.
+First App Store submission: build 11, iPad only. Moves NDI to the free standard SDK, fixes the portrait layout clipping on 13" iPad, and adds a contrast and first-run polish pass.
 
 ### Added
+- Debug-only `-WMDemo <scene>` launch argument that stages the mixer for App Store screenshots in the Simulator (not compiled into Release).
 - **Auto-raise on first source** — assigning a source brings its fader to 100 when nothing else is live and the mixer isn't faded to black.
 - **Empty-monitor hints** in PVW/PGM on first run, and a visible ⓘ About button (NDI® attribution) in the top bar.
 
@@ -32,9 +24,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - **Advanced Output** is now the primary, glowing control in the master section; solid red while open.
 - **GO** centered in its row with a larger hit target and spacing from PARAMS; the second FX button is labelled **PARAMS**. SOURCE on empty channels is outlined in red.
 - Build number bumped to 10.
-
-### Changed (NDI)
 - **Switched from the NDI Advanced SDK to the standard NDI SDK for Apple** — WasteMix only uses standard find/recv/send APIs, and the standard SDK is free to distribute on the App Store (no Vizrt vendor license required). iOS now links `libndi_ios`, Mac/Catalyst embeds `libndi.dylib` from `/Library/NDI SDK for Apple`. Build number bumped to 9.
+
+### Fixed
+- **Status bar overlapped the Advanced Output toolbar** on iPad (clock over TFM, Wi-Fi/battery over the NDI indicator) — the window now hides the status bar like the mixer does.
+- **Master section cut off on 13" iPad in portrait** — unbounded 1pt dividers in the channel AUDIO|COLOR row and master columns stretched vertically, pushing the crossfader, tap tempo, Advanced Output, presets, REC and Media off-screen. Rows now size to their content, and the fit-to-window scale uses the measured content height instead of a hard-coded 560pt estimate.
+- **Advanced Output button stuck "open"** — state now follows the window's scene phase, so it resets when the window is backgrounded, not only when destroyed.
+- **Selected channel strip shifted down 3pt** — the header accent bar now sits in a fixed 5pt slot.
+- **Camera permission prompt at launch** — no longer requested until a camera source is picked.
+
+### Removed
+- **Syphon** output destination hidden from the Advanced Output picker — it was never implemented and Syphon doesn't exist on iPad. The enum case remains so saved configs still decode.
 
 ---
 

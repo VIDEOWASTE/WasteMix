@@ -4,49 +4,62 @@ Real-time 4-channel video mixer with NDI I/O, projection mapping, and live effec
 
 ## Features
 
+![WasteMix mixer on iPad](docs/screenshot.jpg)
+
 ### Mixer
 - 4 independent video channels with vertical faders
-- 16 blend modes (Normal, Add, Multiply, Screen, Overlay, Difference, etc.)
-- Multi-select A/B crossfader with transition controls
-- Cut, Mix, Dip, and 8 directional wipe transitions
+- 33 blend modes (Normal, Add, Screen, Multiply, Difference, Hard Mix, Glow, HSL modes, and more)
+- Multi-select A/B crossfader
+- Per-channel transitions: Mix, Cut, Dip to Black, and 10 wipes
 - Preview (PVW) and Program (PGM) monitors
-- Tap tempo with BPM sync
+- Tap tempo, Fade to Black and Recall
+- First source on an empty mixer raises its fader automatically
 
 ### Effects
-- 16+ real-time GPU effects: Mirror, Invert, Mosaic, Strobe, RGB Split, Posterize, Blur, Solarize, Edges, Datamosh, Scanlines, Kaleidoscope, Halftone, Feedback
+- 20 real-time GPU effects: Rotate, Mirror H/V, Invert, Mosaic, Strobe, Posterize, Blur, Solarize, Edges, Datamosh, Scanlines, Kaleidoscope, Halftone, Feedback, Wave, Tunnel, Channels, Displace, Thermal
 - Per-channel freeze frame
 - Luma key and chroma key
-- Picture-in-Picture (PIP) with scale/position
+- Picture-in-Picture (PIP) with scale, position and rotation
 - Per-channel and global color correction (brightness, contrast, saturation, hue, RGB gain, lift)
 
 ### Modulation
-- LFO with sine, triangle, square, sawtooth, random waveforms
+- Per-channel LFOs and a master LFO: sine, triangle, square, sawtooth, random
 - BPM-synced modulation
 - Audio reactivity with 7-band EQ (Sub Bass through Brilliance)
 - Quick presets: Kick, Bass, Vocal, Hats, Full
 
 ### Input Sources
-- Camera (front/back)
-- NDI network sources (auto-discovery)
-- Video files (MP4, MOV, M4V)
-- Images (JPG, PNG, HEIF)
-- Solid colors
-- Test patterns (Color Bars, Gradient, Checkerboard)
+- iPad cameras (front/back)
+- USB/HDMI capture cards and webcams (UVC) over USB-C
+- NDI® network sources (auto-discovery)
+- Video files (MP4, MOV, M4V) and images (JPG, PNG, HEIF) from Photos
+- 15 audio visualizer styles
+- Solid colors and test patterns (Color Bars, Gradient, Checkerboard)
 
 ### Output
-- NDI output (global program feed + per-screen sends)
+- NDI® output (global program feed + per-screen sends)
 - External display output via HDMI/USB-C with fullscreen support
-- Advanced Output with Resolume-style projection mapping:
+- Advanced Output for projection mapping:
   - Multi-screen, multi-slice output
   - Per-slice mesh warp with draggable grid nodes
   - Corner-pin perspective warping
   - Soft edge blending for multi-projector setups
   - Free transform (move, resize, rotate)
   - 1920x1080 render resolution
+- Record program output to Photos
 
 ### Presets
 - Save and load full mixer state
 - Per-channel settings preserved
+
+## App Store
+
+Version 1.0 (build 11) was submitted for review on 2026-09-28 (iPad only).
+
+- Listing copy, review notes and App Store Connect answers: [`store/APP_STORE_LISTING.md`](store/APP_STORE_LISTING.md)
+- Screenshots (iPad 13", 2064 × 2752, no alpha): [`store/screenshots/`](store/screenshots/)
+- Privacy policy and support pages: [videowaste.github.io/WasteMix](https://videowaste.github.io/WasteMix/) (source in `docs/`)
+- Regenerate screenshots in the Simulator: `tools/screenshots/shoot.sh <simulator-udid>` (uses the Debug-only `-WMDemo` launch argument)
 
 ## Build
 
