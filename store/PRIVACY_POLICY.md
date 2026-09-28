@@ -1,6 +1,6 @@
 # WasteMix — Privacy Policy
 
-_Last updated: September 3, 2026_
+_Last updated: September 28, 2026_
 
 WasteMix ("the app") is a real-time video mixing application for live visual
 performance. Your privacy matters. This policy explains what the app does and
@@ -20,7 +20,8 @@ time for video mixing and is **never uploaded to us or any third party**:
 
 - **Camera** — used as a live video source for mixing. Camera frames are
   rendered on-device and are not recorded or transmitted unless you explicitly
-  choose to save output to your photo library.
+  choose to save output to your photo library or send program output over NDI
+  to other devices on your local network.
 - **Microphone** — used only for audio-reactive visual effects that respond to
   sound in real time. Audio is analyzed on-device and is not recorded or stored.
 - **Photo Library** — used to import your videos and images as mixing sources,

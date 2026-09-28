@@ -29,17 +29,17 @@ _(Tip: don't repeat words already in the app name/subtitle; don't use spaces aft
 
 ## Support URL (required)
 ```
-https://REPLACE-ME  (a simple page or contact page — see notes)
+https://videowaste.github.io/WasteMix/support.html
 ```
 
 ## Marketing URL (optional)
 ```
-https://REPLACE-ME
+https://videowaste.github.io/WasteMix/
 ```
 
 ## Privacy Policy URL (required)
 ```
-https://REPLACE-ME  (host store/PRIVACY_POLICY.md — see notes)
+https://videowaste.github.io/WasteMix/privacy.html
 ```
 
 ## Primary Category
@@ -105,16 +105,15 @@ Built with a Metal rendering pipeline and a liquid UI that scales to any screen.
 
 ## Notes / What you still need to supply
 
-1. **Privacy Policy URL (required):** Host `store/PRIVACY_POLICY.md` somewhere
-   public. Easiest free options: GitHub Pages, a Notion public page, or a
-   Carrd/one-page site. Paste the resulting URL into App Store Connect.
-2. **Support URL (required):** Can be the same site, a simple "Support" page, or
-   even a page that just lists your contact email. It must be a real, reachable
-   URL.
+1. **Privacy Policy / Support / Marketing URLs:** hosted on GitHub Pages from
+   `docs/` on `main`. If you edit `store/PRIVACY_POLICY.md`, update
+   `docs/privacy.html` to match.
+2. **Screenshots:** the existing captures in `~/Desktop/WasteMix-screens` show
+   the camera permission alert — retake them with permissions already granted.
 3. **Screenshots (required):** This is an iPad app, so you need **13-inch iPad**
    screenshots at **2048 × 2732** (portrait) or **2732 × 2048** (landscape),
    1–10 images. Capture from a real iPad or the iPad Pro simulator.
-4. **Build:** Select build **1.0 (8)** once it finishes processing in TestFlight.
+4. **Build:** Select build **1.0 (9)** (standard NDI SDK). Do not ship build 8.
 5. **Age Rating:** Answer the questionnaire (WasteMix has no objectionable
    content → expect 4+).
 6. **Copyright field:** e.g. `2026 Nathaniel Coleman`.
