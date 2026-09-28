@@ -55,7 +55,7 @@ Questions about this policy? Contact:
 
 **Videowaste LLC**
 Contact: Nathaniel Coleman
-Email: natecolemanfilm@gmail.com
+Email: nate@videowaste.com
 
 ---
 
