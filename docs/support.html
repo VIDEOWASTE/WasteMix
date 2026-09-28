@@ -20,28 +20,62 @@
   </nav>
 </header>
 <h1>Support</h1>
-<p>Questions, bug reports, or feature requests? Email <a href="mailto:natecolemanfilm@gmail.com?subject=WasteMix%20Support">natecolemanfilm@gmail.com</a>. Include your iPad model and iPadOS version if you're reporting a problem.</p>
+<p>Questions, bug reports, or feature requests? Email <strong>natecolemanfilm@gmail.com</strong> (<a href="mailto:natecolemanfilm@gmail.com?subject=WasteMix%20Support">write an email</a>). If you're reporting a problem, include your iPad model, your iPadOS version, and what you were doing when it happened.</p>
+
+<div class="card">
+<strong>Requirements</strong>
+<p>An iPad running iPadOS 17 or later. NDI® needs the iPad and the other devices on the same local network. External displays and capture cards connect over USB-C (or an adapter).</p>
+</div>
+
+<h2>Getting started</h2>
+<ol>
+  <li>Tap <em>SOURCE</em> on a channel and pick a camera, a video or image from Photos, an NDI® source, a test pattern, or an audio visualizer.</li>
+  <li>On an empty mixer, the first source's fader rises to full automatically, so it appears in the <em>PGM</em> (program) monitor right away. Later sources start at zero so nothing jumps on screen mid-show.</li>
+  <li>Raise faders to mix channels together. Use the blend mode menu (<em>NORM</em>), <em>FX</em> and <em>PARAMS</em> for effects, and <em>COLOR</em> for color correction.</li>
+  <li>Use the crossfader and the <em>A</em>/<em>B</em> buttons to fade between groups of channels, or <em>GO</em> to run a channel's transition.</li>
+  <li>Open <em>ADVANCED OUTPUT</em> to send the program to a projector or external display, map it onto slices, and set up NDI output.</li>
+</ol>
 
 <h2>Common questions</h2>
 
 <div class="card">
 <strong>NDI sources don't show up</strong>
-<p>Make sure your iPad and the NDI sender are on the same local network, and that WasteMix has Local Network access: <em>Settings → Privacy &amp; Security → Local Network → WasteMix</em>. Some guest or venue Wi-Fi networks block device discovery; a dedicated router or wired network works best.</p>
+<p>Make sure your iPad and the NDI sender are on the same network, and that WasteMix has Local Network access: <em>Settings → Privacy &amp; Security → Local Network → WasteMix</em>. Some guest or venue Wi-Fi networks block device discovery; a dedicated router works best.</p>
 </div>
 
 <div class="card">
 <strong>Other apps can't see WasteMix's NDI output</strong>
-<p>Turn on <em>Program NDI</em> in Advanced Output. The source appears on the network as “WasteMix Program”. Full-quality NDI uses a lot of bandwidth, so 5 GHz Wi-Fi or Ethernet (via a USB-C adapter) is recommended for 1080p.</p>
+<p>WasteMix sends its program output over NDI automatically as “WasteMix Program”. If it's missing, open <em>ADVANCED OUTPUT</em> and check that <em>Program NDI</em> is on under <em>NDI OUTPUT</em>. The feed is 640 × 480 at 30 fps so it stays reliable over Wi-Fi. Individual screens can also be sent as their own NDI outputs by setting their destination to NDI.</p>
 </div>
 
 <div class="card">
 <strong>Camera or microphone isn't working</strong>
-<p>Check <em>Settings → WasteMix</em> and make sure Camera and Microphone are allowed. The microphone is only used for audio-reactive visuals and is never recorded.</p>
+<p>WasteMix asks for the camera the first time you pick a camera source, and for the microphone the first time you open <em>AUDIO</em>. If you tapped Don't Allow, turn them back on in <em>Settings → WasteMix</em>. The microphone is only used for audio-reactive visuals and is never recorded.</p>
 </div>
 
 <div class="card">
-<strong>External display or projector</strong>
-<p>Connect over USB-C or an HDMI adapter. WasteMix sends program output fullscreen to the external display; use Advanced Output for slices, warping, and edge blending.</p>
+<strong>Capture cards and USB cameras</strong>
+<p>Plug a UVC-compatible HDMI capture card or USB webcam into the iPad's USB-C port. It appears under <em>SOURCE → External Capture (UVC)</em> and updates as devices are plugged in or removed.</p>
+</div>
+
+<div class="card">
+<strong>External displays and projection mapping</strong>
+<p>Connect a display or projector over USB-C or an HDMI adapter. In <em>ADVANCED OUTPUT</em>, choose <em>Display</em> as the screen's destination. From there you can add slices, move and resize them, warp them with a mesh grid or corner pin, and soften edges where projectors overlap.</p>
+</div>
+
+<div class="card">
+<strong>Recording</strong>
+<p>Tap <em>REC</em> to record the program output. Finished recordings appear in <em>MEDIA</em>, ready to load as a source, and are also saved to Photos if you allow it.</p>
+</div>
+
+<div class="card">
+<strong>Presets</strong>
+<p><em>SAVE</em> stores the whole mixer state, including each channel's settings. <em>LOAD</em> brings it back.</p>
+</div>
+
+<div class="card">
+<strong>Credits and version</strong>
+<p>Tap the <em>ⓘ</em> button in the top-left corner of the mixer for the About screen, including NDI® credits.</p>
 </div>
 <footer>© 2026 Nathaniel Coleman · NDI® is a registered trademark of Vizrt NDI AB. <a href="https://ndi.video/">ndi.video</a></footer>
 </div>

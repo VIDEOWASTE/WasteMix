@@ -23,7 +23,7 @@ h2 { font-size: 20px; margin: 32px 0 8px; }
 p, li { color: var(--text); }
 .muted { color: var(--muted); }
 a { color: var(--accent); }
-ul { padding-left: 20px; }
+ul, ol { padding-left: 20px; }
 li { margin-bottom: 8px; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 16px 0; }
 

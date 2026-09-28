@@ -18,7 +18,8 @@ WasteMix uses the following device capabilities **locally on your device**, only
 while you are using the corresponding feature. This content is processed in real
 time for video mixing and is **never uploaded to us or any third party**:
 
-- **Camera** — used as a live video source for mixing. Camera frames are
+- **Camera and capture devices** — the iPad cameras and any USB/HDMI capture
+  card or webcam you connect are used as live video sources for mixing. Frames are
   rendered on-device and are not recorded or transmitted unless you explicitly
   choose to save output to your photo library or send program output over NDI
   to other devices on your local network.
@@ -27,6 +28,9 @@ time for video mixing and is **never uploaded to us or any third party**:
 - **Photo Library** — used to import your videos and images as mixing sources,
   and to save program-output recordings back to your library when you choose to.
   Access happens only through the standard iOS/iPadOS system pickers.
+- **Recordings** — when you tap REC, the program output is saved inside the app
+  (Media Center) and, if you allow it, to your photo library. Recordings never
+  leave your device unless you share them yourself.
 - **Local Network** — used to discover and exchange NDI® video sources with
   other devices on your local network. This traffic stays on your local network
   and is not routed to us. No local-network data is collected or stored by us.
