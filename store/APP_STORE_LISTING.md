@@ -103,7 +103,7 @@ _Optional_
 
 ## Copyright
 ```
-2026 Nathaniel Coleman
+2026 Videowaste LLC
 ```
 
 ## Privacy Policy URL
