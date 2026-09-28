@@ -22,7 +22,7 @@ struct MediaCenterView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Rectangle().fill(Color.white.opacity(0.06)).frame(height: 1)
+            Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1)
             if clipLibrary.clips.isEmpty {
                 emptyState
             } else {
@@ -62,7 +62,7 @@ struct MediaCenterView: View {
         HStack(spacing: 8) {
             Text("\(clipLibrary.clips.count) CLIP\(clipLibrary.clips.count == 1 ? "" : "S")")
                 .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
 
             Spacer()
 
@@ -79,7 +79,7 @@ struct MediaCenterView: View {
                 }
                 .foregroundColor(.white)
                 .padding(.horizontal, 12).padding(.vertical, 7)
-                .background(Color.white.opacity(0.08))
+                .background(Color.white.opacity(0.14))
                 .overlay(Rectangle().stroke(Color.white.opacity(0.18), lineWidth: 0.5))
             }
             .disabled(importing)
@@ -96,7 +96,7 @@ struct MediaCenterView: View {
                 .foregroundColor(.gray.opacity(0.5))
             Text("No clips yet")
                 .font(.system(size: 13, weight: .heavy, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
             Text("Tap REC to record the program output, or IMPORT to add a video from your Photos library. Recorded clips appear here automatically.")
                 .font(.system(size: 11))
                 .foregroundColor(.gray.opacity(0.7))
@@ -132,6 +132,7 @@ struct MediaCenterView: View {
         let source: ContentSource = .mediaFile(url: clip.url)
         channel.source = source
         inputManager.applySource(source, to: channel.id, channel: channel, renderEngine: renderEngine)
+        mixerState.autoRaiseFaderIfNothingLive(for: channel)
         Haptics.success()
         onAssigned()
     }
@@ -182,7 +183,7 @@ private struct ClipRow: View {
                 HStack(spacing: 8) {
                     Text(formattedDuration)
                         .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
                     Text(formattedSize)
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundColor(.gray.opacity(0.7))
@@ -213,16 +214,16 @@ private struct ClipRow: View {
             } label: {
                 Image(systemName: "trash")
                     .font(.system(size: 12))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                     .frame(width: 28, height: 28)
-                    .background(Color.white.opacity(0.04))
+                    .background(Color.white.opacity(0.09))
                     .overlay(Rectangle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
             }
             .buttonStyle(TactileButtonStyle())
         }
         .padding(8)
-        .background(Color.white.opacity(0.03))
-        .overlay(Rectangle().stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+        .background(Color.white.opacity(0.07))
+        .overlay(Rectangle().stroke(Color.white.opacity(0.14), lineWidth: 0.5))
         .task(id: clip.id) {
             thumbnail = await library.thumbnail(for: clip)
         }

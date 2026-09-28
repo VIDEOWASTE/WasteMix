@@ -63,7 +63,7 @@ struct SourcePickerView: View {
                             HStack(spacing: 10) {
                                 Image(systemName: "cable.connector")
                                     .font(.system(size: 14))
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.wmSecondary)
                                     .frame(width: 28)
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text("No capture devices")
@@ -71,7 +71,7 @@ struct SourcePickerView: View {
                                         .foregroundColor(.white.opacity(0.7))
                                     Text("Connect an HDMI capture card or USB camera via USB-C")
                                         .font(.system(size: 10))
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(.wmSecondary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 Spacer()
@@ -123,7 +123,7 @@ struct SourcePickerView: View {
                                         .foregroundColor(.white)
                                     Text("MP4, MOV, M4V from your library")
                                         .font(.system(size: 10))
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(.wmSecondary)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -149,7 +149,7 @@ struct SourcePickerView: View {
                                         .foregroundColor(.white)
                                     Text("JPG, PNG, HEIF from your library")
                                         .font(.system(size: 10))
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(.wmSecondary)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -268,7 +268,7 @@ struct SourcePickerView: View {
         HStack(spacing: 10) {
             Image(systemName: "info.circle")
                 .font(.system(size: 13))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text("One camera at a time")
@@ -276,13 +276,13 @@ struct SourcePickerView: View {
                     .foregroundColor(.white.opacity(0.85))
                 Text("This iPad doesn't support running both cameras simultaneously. Switching between front/back works as expected.")
                     .font(.system(size: 10))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
         }
         .padding(.horizontal, 14).padding(.vertical, 8)
-        .background(Color.white.opacity(0.04))
+        .background(Color.white.opacity(0.09))
     }
 
     private var cameraDeniedBanner: some View {
@@ -302,7 +302,7 @@ struct SourcePickerView: View {
                         .foregroundColor(.white)
                     Text("Tap to open Settings → enable Camera for WasteMix")
                         .font(.system(size: 10))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
                 }
                 Spacer()
                 Image(systemName: "arrow.up.right.square")
@@ -371,7 +371,7 @@ struct SourcePickerView: View {
                         .foregroundColor(envBandColor(band))
                     Text(band.freqLabel)
                         .font(.system(size: 9, weight: .heavy, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
                     Spacer()
                 }
                 envSlider(label: "GAIN", value: envBinding(\.gain), range: 0...2,
@@ -385,7 +385,7 @@ struct SourcePickerView: View {
             }
             .id(selectedEnvBand)
 
-            Divider().background(Color.white.opacity(0.1))
+            Divider().background(Color.white.opacity(0.17))
 
             // Global knobs (apply across every variant)
             Text("BEAT + MOTION")
@@ -449,8 +449,8 @@ struct SourcePickerView: View {
             }
             .padding(.vertical, 6).padding(.horizontal, 4)
             .frame(maxWidth: .infinity)
-            .background(isSelected ? color.opacity(0.25) : Color.white.opacity(0.05))
-            .overlay(Rectangle().stroke(isSelected ? color : Color.white.opacity(0.10), lineWidth: 1))
+            .background(isSelected ? color.opacity(0.25) : Color.white.opacity(0.10))
+            .overlay(Rectangle().stroke(isSelected ? color : Color.white.opacity(0.17), lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
@@ -508,7 +508,7 @@ struct SourcePickerView: View {
         HStack(spacing: 10) {
             Text(label)
                 .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
                 .frame(width: 84, alignment: .leading)
             Slider(value: Binding(
                 get: { Double(value.wrappedValue) },
@@ -538,7 +538,7 @@ struct SourcePickerView: View {
         HStack(spacing: 10) {
             Text(label)
                 .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
                 .frame(width: 72, alignment: .leading)
             Slider(value: Binding(
                 get: { Double(value.wrappedValue) },
@@ -558,18 +558,18 @@ struct SourcePickerView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title.uppercased())
                 .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
                 .tracking(1)
                 .padding(.horizontal, 20)
 
             VStack(spacing: 1) {
                 content()
             }
-            .background(Color.white.opacity(0.04))
+            .background(Color.white.opacity(0.09))
             .clipShape(Rectangle())
             .overlay(
                 Rectangle()
-                    .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
             )
             .padding(.horizontal, 16)
         }
@@ -612,7 +612,7 @@ struct SourcePickerView: View {
                     .shadow(color: color.opacity(0.4), radius: 3)
                 Text(label)
                     .font(.system(size: 8, weight: .heavy, design: .monospaced))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
             }
         }
     }
@@ -622,6 +622,7 @@ struct SourcePickerView: View {
     private func selectSource(_ source: ContentSource) {
         channel.source = source
         inputManager.applySource(source, to: channel.id, channel: channel, renderEngine: renderEngine)
+        renderEngine.mixerState.autoRaiseFaderIfNothingLive(for: channel)
         close()
     }
 

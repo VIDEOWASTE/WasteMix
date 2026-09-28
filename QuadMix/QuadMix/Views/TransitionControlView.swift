@@ -67,16 +67,16 @@ struct TransitionControlView: View {
                     .foregroundColor(.white)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .bold))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 5)
             .background(
                 Rectangle()
-                    .fill(Color.white.opacity(0.06))
+                    .fill(Color.white.opacity(0.12))
                     .overlay(
                         Rectangle()
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            .stroke(Color.white.opacity(0.17), lineWidth: 1)
                     )
             )
         }
@@ -108,9 +108,9 @@ struct TransitionControlView: View {
             } label: {
                 Image(systemName: "minus")
                     .font(.system(size: 7, weight: .heavy))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                     .frame(width: 18, height: 22)
-                    .background(Color.white.opacity(0.06))
+                    .background(Color.white.opacity(0.12))
                     
             }
             .buttonStyle(TactileButtonStyle())
@@ -126,9 +126,9 @@ struct TransitionControlView: View {
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 7, weight: .heavy))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                     .frame(width: 18, height: 22)
-                    .background(Color.white.opacity(0.06))
+                    .background(Color.white.opacity(0.12))
                     
             }
             .buttonStyle(TactileButtonStyle())
@@ -166,7 +166,7 @@ struct TransitionControlView: View {
     private var progressBar: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Rectangle().fill(Color.white.opacity(0.08))
+                Rectangle().fill(Color.white.opacity(0.14))
                 Rectangle()
                     .fill(Color.orange)
                     .frame(width: geo.size.width * CGFloat(channel.transitionProgress))

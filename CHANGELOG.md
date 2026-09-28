@@ -8,7 +8,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed
+- **Master section cut off on 13" iPad in portrait** — unbounded 1pt dividers in the channel AUDIO|COLOR row and master columns stretched vertically, pushing the crossfader, tap tempo, Advanced Output, presets, REC and Media off-screen. Rows now size to their content, and the fit-to-window scale uses the measured content height instead of a hard-coded 560pt estimate.
+- **Advanced Output button stuck "open"** — state now follows the window's scene phase, so it resets when the window is backgrounded, not only when destroyed.
+- **Selected channel strip shifted down 3pt** — the header accent bar now sits in a fixed 5pt slot.
+- **Camera permission prompt at launch** — no longer requested until a camera source is picked.
+
+### Added
+- **Auto-raise on first source** — assigning a source brings its fader to 100 when nothing else is live and the mixer isn't faded to black.
+- **Empty-monitor hints** in PVW/PGM on first run, and a visible ⓘ About button (NDI® attribution) in the top bar.
+
 ### Changed
+- **Contrast pass** — lifted section backgrounds, roughly doubled hairline/border opacity, brighter secondary labels (`Color.wmSecondary`) and red captions.
+- **Advanced Output** is now the primary, glowing control in the master section; solid red while open.
+- **GO** centered in its row with a larger hit target and spacing from PARAMS; the second FX button is labelled **PARAMS**. SOURCE on empty channels is outlined in red.
+- Build number bumped to 10.
+
+### Changed (NDI)
 - **Switched from the NDI Advanced SDK to the standard NDI SDK for Apple** — WasteMix only uses standard find/recv/send APIs, and the standard SDK is free to distribute on the App Store (no Vizrt vendor license required). iOS now links `libndi_ios`, Mac/Catalyst embeds `libndi.dylib` from `/Library/NDI SDK for Apple`. Build number bumped to 9.
 
 ---

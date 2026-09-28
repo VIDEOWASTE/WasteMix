@@ -44,7 +44,7 @@ struct EffectsControlView: View {
                 Text("FREEZE")
                     .font(.system(size: 8, weight: .heavy, design: .monospaced))
             }
-            .foregroundColor(channel.isFrozen ? .white : .gray)
+            .foregroundColor(channel.isFrozen ? .white : .wmSecondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 5)
             .background(
@@ -81,14 +81,14 @@ struct EffectsControlView: View {
             HStack(spacing: 4) {
                 Image(systemName: channel.effectType.icon)
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(channel.effectType != .none ? accentColor : .gray)
+                    .foregroundColor(channel.effectType != .none ? accentColor : .wmSecondary)
                 Text(channel.effectType != .none ? channel.effectType.displayName : "FX")
                     .font(.system(size: 8, weight: .heavy, design: .monospaced))
-                    .foregroundColor(channel.effectType != .none ? .white : .gray)
+                    .foregroundColor(channel.effectType != .none ? .white : .wmSecondary)
                 Spacer()
                 Image(systemName: "chevron.down")
                     .font(.system(size: 6, weight: .bold))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 5)
@@ -108,7 +108,7 @@ struct EffectsControlView: View {
         HStack(spacing: 3) {
             Text("INT")
                 .font(.system(size: 7, weight: .bold, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
             Slider(
                 value: Binding(
                     get: { Double(channel.effectIntensity) },
@@ -135,7 +135,7 @@ struct EffectsControlView: View {
                 Text("KEY")
                     .font(.system(size: 7, weight: .heavy, design: .monospaced))
             }
-            .foregroundColor(channel.keySettings.isActive ? .green : .gray)
+            .foregroundColor(channel.keySettings.isActive ? .green : .wmSecondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
             .background(
@@ -165,7 +165,7 @@ struct EffectsControlView: View {
                 Text("PIP")
                     .font(.system(size: 7, weight: .heavy, design: .monospaced))
             }
-            .foregroundColor(!channel.pipSettings.isDefault ? .cyan : .gray)
+            .foregroundColor(!channel.pipSettings.isDefault ? .cyan : .wmSecondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
             .background(
@@ -197,7 +197,7 @@ struct EffectsControlView: View {
                 Text("FRAME")
                     .font(.system(size: 7, weight: .heavy, design: .monospaced))
             }
-            .foregroundColor(active ? .orange : .gray)
+            .foregroundColor(active ? .orange : .wmSecondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
             .background(
@@ -238,7 +238,7 @@ struct FrameSettingsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("ROTATION")
                     .font(.system(size: 9, weight: .heavy, design: .monospaced))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                 Picker("Rotation", selection: Binding(
                     get: { channel.rotation },
                     set: { channel.rotation = $0 }
@@ -253,7 +253,7 @@ struct FrameSettingsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("ASPECT")
                     .font(.system(size: 9, weight: .heavy, design: .monospaced))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                 Picker("Fit", selection: Binding(
                     get: { channel.fitMode },
                     set: { channel.fitMode = $0 }
@@ -267,7 +267,7 @@ struct FrameSettingsView: View {
                      ? "Letterbox — preserve aspect, black bars on the short side."
                      : "Crop — preserve aspect, fill the canvas (edges trimmed).")
                     .font(.system(size: 10))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
             }
         }
         .padding()

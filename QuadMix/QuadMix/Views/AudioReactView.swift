@@ -40,7 +40,7 @@ struct AudioReactView: View {
                 // Target picker
                 VStack(alignment: .leading, spacing: 3) {
                     Text("DRIVES").font(.system(size: 8, weight: .heavy, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
                     Picker("Target", selection: Binding(
                         get: { channel.audioReact.target },
                         set: { channel.audioReact.target = $0 }
@@ -55,7 +55,7 @@ struct AudioReactView: View {
                 // EQ bands — 7 vertical sliders
                 VStack(alignment: .leading, spacing: 4) {
                     Text("FREQUENCY BANDS").font(.system(size: 8, weight: .heavy, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
 
                     HStack(alignment: .bottom, spacing: 4) {
                         ForEach(0..<7) { band in
@@ -68,7 +68,7 @@ struct AudioReactView: View {
                 // Live meter
                 VStack(alignment: .leading, spacing: 3) {
                     Text("LIVE INPUT").font(.system(size: 8, weight: .heavy, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
 
                     HStack(spacing: 2) {
                         ForEach(0..<7) { band in
@@ -87,7 +87,7 @@ struct AudioReactView: View {
 
                                 Text(AudioEngine.bandNames[band].prefix(3).uppercased())
                                     .font(.system(size: 5, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.wmSecondary)
                             }
                             .frame(maxWidth: .infinity)
                         }
@@ -95,7 +95,7 @@ struct AudioReactView: View {
 
                     // Output value bar
                     HStack(spacing: 4) {
-                        Text("OUT").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(.gray)
+                        Text("OUT").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary)
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
                                 Rectangle().fill(Color.white.opacity(0.8))
@@ -116,21 +116,21 @@ struct AudioReactView: View {
                 // Smoothing + range
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("SMOOTH").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(.gray)
+                        Text("SMOOTH").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary)
                         Slider(
                             value: Binding(get: { Double(channel.audioReact.smoothing) }, set: { channel.audioReact.smoothing = Float($0) }),
                             in: 0...0.95
                         ).tint(accentColor)
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("FLOOR").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(.gray)
+                        Text("FLOOR").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary)
                         Slider(
                             value: Binding(get: { Double(channel.audioReact.floor) }, set: { channel.audioReact.floor = Float($0) }),
                             in: 0...1
                         ).tint(accentColor)
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("CEIL").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(.gray)
+                        Text("CEIL").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary)
                         Slider(
                             value: Binding(get: { Double(channel.audioReact.ceiling) }, set: { channel.audioReact.ceiling = Float($0) }),
                             in: 0...1
@@ -141,7 +141,7 @@ struct AudioReactView: View {
                 // Quick presets — wrapped to two rows so they can be a real
                 // size instead of fighting for inline space.
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("PRESETS").font(.system(size: 10, weight: .heavy, design: .monospaced)).foregroundColor(.gray)
+                    Text("PRESETS").font(.system(size: 10, weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary)
                     HStack(spacing: 6) {
                         eqPresetBtn("KICK") { setGains([1, 0.8, 0, 0, 0, 0, 0]) }
                         eqPresetBtn("BASS") { setGains([0.5, 1, 0.5, 0, 0, 0, 0]) }
@@ -166,7 +166,7 @@ struct AudioReactView: View {
             // Band name
             Text(AudioEngine.bandNames[band].prefix(3).uppercased())
                 .font(.system(size: 6, weight: .heavy, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
 
             // Vertical gain slider
             GeometryReader { geo in
@@ -194,7 +194,7 @@ struct AudioReactView: View {
             // Range label
             Text(AudioEngine.bandRanges[band])
                 .font(.system(size: 4, weight: .medium, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
 

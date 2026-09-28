@@ -10,9 +10,9 @@ struct FaderView: View {
             ZStack(alignment: .bottom) {
                 // Track
                 Rectangle()
-                    .fill(Color.white.opacity(0.05))
+                    .fill(Color.white.opacity(0.10))
                     .frame(width: 44)
-                    .overlay(Rectangle().stroke(Color.white.opacity(0.06), lineWidth: 0.5))
+                    .overlay(Rectangle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
 
                 // Tick marks at 0, 25, 50, 75, 100
                 tickMarks(height: geo.size.height)
@@ -47,7 +47,7 @@ struct FaderView: View {
             ForEach(0..<5) { i in
                 if i > 0 { Spacer() }
                 Rectangle()
-                    .fill(Color.white.opacity(0.08))
+                    .fill(Color.white.opacity(0.14))
                     .frame(width: 30, height: 1)
             }
         }

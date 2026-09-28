@@ -20,8 +20,8 @@ struct ColorCorrectionView: View {
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.gray).padding(6)
-                        .background(Color.white.opacity(0.06))
+                        .foregroundColor(.wmSecondary).padding(6)
+                        .background(Color.white.opacity(0.12))
                 }
             }
 
@@ -30,21 +30,21 @@ struct ColorCorrectionView: View {
             CorrectionSlider(label: "SAT", value: $correction.saturation, range: 0...2, tint: R)
             CorrectionSlider(label: "HUE", value: $correction.hueShift, range: 0...360, format: "%.0f", tint: R)
 
-            Rectangle().fill(Color.white.opacity(0.08)).frame(height: 0.5).padding(.vertical, 2)
+            Rectangle().fill(Color.white.opacity(0.14)).frame(height: 0.5).padding(.vertical, 2)
 
             Text("RGB GAIN")
                 .font(.system(size: 11, weight: .black, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
 
             CorrectionSlider(label: "R", value: $correction.redGain, range: 0...2, tint: Color(red: 1, green: 0.3, blue: 0.3))
             CorrectionSlider(label: "G", value: $correction.greenGain, range: 0...2, tint: Color(red: 0.3, green: 1, blue: 0.3))
             CorrectionSlider(label: "B", value: $correction.blueGain, range: 0...2, tint: Color(red: 0.3, green: 0.3, blue: 1))
 
-            Rectangle().fill(Color.white.opacity(0.08)).frame(height: 0.5).padding(.vertical, 2)
+            Rectangle().fill(Color.white.opacity(0.14)).frame(height: 0.5).padding(.vertical, 2)
 
             Text("BLACK BALANCE")
                 .font(.system(size: 11, weight: .black, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
 
             CorrectionSlider(label: "BLK", value: $correction.blackLevel, range: 0...0.5, tint: R)
             CorrectionSlider(label: "LFT R", value: $correction.liftR, range: -0.5...0.5, tint: Color(red: 1, green: 0.3, blue: 0.3))
@@ -52,7 +52,7 @@ struct ColorCorrectionView: View {
             CorrectionSlider(label: "LFT B", value: $correction.liftB, range: -0.5...0.5, tint: Color(red: 0.3, green: 0.3, blue: 1))
         }
         .padding(12)
-        .background(Color(red: 0.06, green: 0.06, blue: 0.07))
+        .background(Color(red: 0.09, green: 0.09, blue: 0.10))
     }
 }
 
@@ -67,7 +67,7 @@ struct CorrectionSlider: View {
         HStack(spacing: 6) {
             Text(label)
                 .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .frame(width: 44, alignment: .trailing)

@@ -68,9 +68,10 @@ final class InputManager {
         return (activeSources[channelIndex] as? AudioVisualizerSource)?.liveEnvelopes
     }
 
+    /// Reads the current status only. The prompt itself is shown by
+    /// `CameraSource.start()` the first time a camera is picked as a source,
+    /// so launching the app never asks for camera access out of context.
     private func checkCameraPermission() {
-        Task {
-            cameraPermissionGranted = await CameraSource.requestPermission()
-        }
+        cameraPermissionGranted = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
     }
 }

@@ -32,7 +32,7 @@ struct AdvancedOutputView: View {
                     ndiSendButton(sc)
                 }
                 .padding(.horizontal, 6).padding(.vertical, 3)
-                .background(Color(red: 0.05, green: 0.05, blue: 0.06))
+                .background(Color(red: 0.09, green: 0.09, blue: 0.10))
 
                 // Main content
                 HStack(spacing: 0) {
@@ -45,9 +45,9 @@ struct AdvancedOutputView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.leading, 18)
                         .padding(.bottom, 18)
-                        .background(Color(red: 0.06, green: 0.06, blue: 0.07))
+                        .background(Color(red: 0.09, green: 0.09, blue: 0.10))
 
-                    Rectangle().fill(R.opacity(0.1)).frame(width: 1)
+                    Rectangle().fill(R.opacity(0.2)).frame(width: 1)
 
                     // Right panel — narrower default so the canvas gets more room.
                     let panelW = min(max(w * 0.3, 160), 240)
@@ -104,7 +104,7 @@ struct AdvancedOutputView: View {
                         .frame(width: scaled(8, sc), height: scaled(8, sc))
                     Text(screen.enabled && screen.destination != .none ? "LIVE" : "OFF")
                         .font(.system(size: sf(8, sc), weight: .black, design: .monospaced))
-                        .foregroundColor(screen.enabled && screen.destination != .none ? .green : .gray)
+                        .foregroundColor(screen.enabled && screen.destination != .none ? .green : .wmSecondary)
                 }
                 Toggle("", isOn: Binding(
                     get: { outputConfig.screens[idx].enabled },
@@ -113,7 +113,7 @@ struct AdvancedOutputView: View {
             }
         }
         .padding(.horizontal, scaled(8, sc)).padding(.vertical, scaled(4, sc))
-        .background(Color(red: 0.05, green: 0.05, blue: 0.06))
+        .background(Color(red: 0.09, green: 0.09, blue: 0.10))
     }
 
     // MARK: - Inline Mode Controls (embedded in top bar)
@@ -155,7 +155,7 @@ struct AdvancedOutputView: View {
                         .font(.system(size: 13, weight: .black))
                         .foregroundColor(R.opacity(0.85))
                         .frame(width: 32, height: 26)
-                        .background(R.opacity(0.10))
+                        .background(R.opacity(0.2))
                         .overlay(Rectangle().stroke(R.opacity(0.3), lineWidth: 0.5))
                 }.buttonStyle(TactileButtonStyle())
 
@@ -169,9 +169,9 @@ struct AdvancedOutputView: View {
                 } label: {
                     Text("RST").font(.system(size: 9, weight: .black, design: .monospaced))
                         .lineLimit(1).minimumScaleFactor(0.7)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
                         .padding(.horizontal, 6).padding(.vertical, 6)
-                        .background(Color.white.opacity(0.05))
+                        .background(Color.white.opacity(0.10))
                 }.buttonStyle(TactileButtonStyle())
             } else if outputConfig.canvasEditMode == .transform {
                 // FREE / LOCK aspect ratio — mirrors the mesh sub-options style.
@@ -202,10 +202,10 @@ struct AdvancedOutputView: View {
                         Text("LOCK").font(.system(size: 9, weight: .black, design: .monospaced))
                             .lineLimit(1).minimumScaleFactor(0.7)
                     }
-                    .foregroundColor(locked ? .white : .gray)
+                    .foregroundColor(locked ? .white : .wmSecondary)
                     .padding(.horizontal, 6).padding(.vertical, 6)
-                    .background(locked ? R.opacity(0.3) : Color.white.opacity(0.05))
-                    .overlay(Rectangle().stroke(locked ? R : Color.white.opacity(0.1), lineWidth: 0.5))
+                    .background(locked ? R.opacity(0.3) : Color.white.opacity(0.10))
+                    .overlay(Rectangle().stroke(locked ? R : Color.white.opacity(0.17), lineWidth: 0.5))
                 }.buttonStyle(TactileButtonStyle())
                 Button {
                     if si < outputConfig.screens.count, sli < outputConfig.screens[si].slices.count {
@@ -217,8 +217,8 @@ struct AdvancedOutputView: View {
                         .lineLimit(1).minimumScaleFactor(0.7)
                         .foregroundColor(locked ? .gray : .white)
                         .padding(.horizontal, 6).padding(.vertical, 6)
-                        .background(locked ? Color.white.opacity(0.05) : R.opacity(0.3))
-                        .overlay(Rectangle().stroke(locked ? Color.white.opacity(0.1) : R, lineWidth: 0.5))
+                        .background(locked ? Color.white.opacity(0.10) : R.opacity(0.3))
+                        .overlay(Rectangle().stroke(locked ? Color.white.opacity(0.17) : R, lineWidth: 0.5))
                 }.buttonStyle(TactileButtonStyle())
             }
 
@@ -238,7 +238,7 @@ struct AdvancedOutputView: View {
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(snap ? .white : .white.opacity(0.7))
                         .frame(width: 32, height: 26)
-                        .background(snap ? R.opacity(0.45) : Color.white.opacity(0.10))
+                        .background(snap ? R.opacity(0.45) : Color.white.opacity(0.17))
                         .overlay(Rectangle().stroke(snap ? R : Color.white.opacity(0.25), lineWidth: 0.5))
                         .contentShape(Rectangle())
                 }
@@ -248,7 +248,7 @@ struct AdvancedOutputView: View {
                     .font(.system(size: 13, weight: .heavy))
                     .foregroundColor(.white)
                     .frame(width: 32, height: 26)
-                    .background(Color.white.opacity(0.10))
+                    .background(Color.white.opacity(0.17))
                     .overlay(Rectangle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -259,7 +259,7 @@ struct AdvancedOutputView: View {
 
                 Text("\(Int(canvasZoom * 100))%")
                     .font(.system(size: 9, weight: .heavy, design: .monospaced))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                     .frame(width: 38, height: 26)
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -272,7 +272,7 @@ struct AdvancedOutputView: View {
                     .font(.system(size: 13, weight: .heavy))
                     .foregroundColor(.white)
                     .frame(width: 32, height: 26)
-                    .background(Color.white.opacity(0.10))
+                    .background(Color.white.opacity(0.17))
                     .overlay(Rectangle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -319,9 +319,9 @@ struct AdvancedOutputView: View {
                     }
                 } label: {
                     Text("RESET").font(.system(size: sf(7, sc), weight: .black, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
                         .padding(.horizontal, scaled(6, sc)).padding(.vertical, scaled(3, sc))
-                        .background(Color.white.opacity(0.05))
+                        .background(Color.white.opacity(0.10))
                 }.buttonStyle(TactileButtonStyle())
 
                 // Grid size indicator
@@ -332,7 +332,7 @@ struct AdvancedOutputView: View {
                     if !mesh.nodes.isEmpty {
                         Text("\(mesh.cols)x\(mesh.rows)")
                             .font(.system(size: sf(7, sc), weight: .bold, design: .monospaced))
-                            .foregroundColor(.gray)
+                            .foregroundColor(.wmSecondary)
                     }
                 }
             }
@@ -342,11 +342,11 @@ struct AdvancedOutputView: View {
             let mode = outputConfig.canvasEditMode
             Text(mode == .transform ? "Move / resize" : "Drag nodes to warp")
                 .font(.system(size: sf(6, sc), weight: .medium, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
         }
         .padding(.horizontal, scaled(6, sc))
         .padding(.vertical, scaled(3, sc))
-        .background(Color(red: 0.04, green: 0.04, blue: 0.05))
+        .background(Color(red: 0.07, green: 0.07, blue: 0.08))
     }
 
     private func modeButton(_ icon: String, _ label: String, _ mode: CanvasEditMode, _ sc: CGFloat) -> some View {
@@ -374,12 +374,12 @@ struct AdvancedOutputView: View {
                     .minimumScaleFactor(0.6)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .foregroundColor(isActive ? .white : .gray)
+            .foregroundColor(isActive ? .white : .wmSecondary)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(isActive ? R.opacity(0.4) : Color.white.opacity(0.04))
+            .background(isActive ? R.opacity(0.4) : Color.white.opacity(0.09))
             .overlay(
-                Rectangle().stroke(isActive ? R : Color.white.opacity(0.1), lineWidth: 1)
+                Rectangle().stroke(isActive ? R : Color.white.opacity(0.17), lineWidth: 1)
             )
         }
         .buttonStyle(TactileButtonStyle())
@@ -469,7 +469,7 @@ struct AdvancedOutputView: View {
 
                             // Dim mesh grid for non-selected
                             if slice.meshWarpEnabled && !slice.meshWarp.nodes.isEmpty {
-                                meshGridLines(slice: slice, x: x, y: y, w: w, h: h, color: Color.white.opacity(0.1))
+                                meshGridLines(slice: slice, x: x, y: y, w: w, h: h, color: Color.white.opacity(0.17))
                             }
                         }
                     }
@@ -885,10 +885,10 @@ struct AdvancedOutputView: View {
                         Text(screen.name)
                             .font(.system(size: sf(11, sc), weight: .black, design: .monospaced))
                             .lineLimit(1).minimumScaleFactor(0.7)
-                            .foregroundColor(sel ? .white : .gray)
+                            .foregroundColor(sel ? .white : .wmSecondary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, scaled(7, sc))
-                            .background(sel ? R.opacity(0.3) : Color.white.opacity(0.03))
+                            .background(sel ? R.opacity(0.3) : Color.white.opacity(0.07))
                             .overlay(VStack { Rectangle().fill(sel ? R : Color.clear).frame(height: scaled(2, sc)); Spacer() })
                     }
                     .buttonStyle(TactileButtonStyle())
@@ -939,10 +939,10 @@ struct AdvancedOutputView: View {
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.6)
                         }
-                        .foregroundColor(sel ? .white : .gray)
+                        .foregroundColor(sel ? .white : .wmSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(sel ? R.opacity(0.3) : Color.white.opacity(0.04))
+                        .background(sel ? R.opacity(0.3) : Color.white.opacity(0.09))
                         .overlay(VStack { Rectangle().fill(sel ? R : Color.clear).frame(height: 2); Spacer() })
                     }
                     .buttonStyle(TactileButtonStyle())
@@ -996,13 +996,13 @@ struct AdvancedOutputView: View {
                             Spacer()
                             if isSelected {
                                 Text(isActive ? "ON" : "OFF").font(.system(size: 11, weight: .black, design: .monospaced))
-                                    .foregroundColor(isActive ? .green : .gray)
+                                    .foregroundColor(isActive ? .green : .wmSecondary)
                             }
                         }
-                        .foregroundColor(isSelected ? .white : .gray)
+                        .foregroundColor(isSelected ? .white : .wmSecondary)
                         .padding(.horizontal, 10).padding(.vertical, 10)
-                        .background(isActive ? R.opacity(0.18) : Color.white.opacity(0.04))
-                        .overlay(Rectangle().stroke(isActive ? R.opacity(0.5) : Color.white.opacity(0.10), lineWidth: 0.5))
+                        .background(isActive ? R.opacity(0.18) : Color.white.opacity(0.09))
+                        .overlay(Rectangle().stroke(isActive ? R.opacity(0.5) : Color.white.opacity(0.17), lineWidth: 0.5))
                     }.buttonStyle(TactileButtonStyle())
                 }
             }
@@ -1041,7 +1041,7 @@ struct AdvancedOutputView: View {
                     }
                     .foregroundColor(R)
                     .padding(.horizontal, scaled(6, sc)).padding(.vertical, scaled(3, sc))
-                    .background(R.opacity(0.1))
+                    .background(R.opacity(0.2))
                 }.buttonStyle(TactileButtonStyle())
             }
 
@@ -1071,7 +1071,7 @@ struct AdvancedOutputView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(slice.name)
                                 .font(.system(size: 12, weight: .black, design: .monospaced))
-                                .foregroundColor(isSel ? .white : .gray)
+                                .foregroundColor(isSel ? .white : .wmSecondary)
                                 .lineLimit(1).minimumScaleFactor(0.6)
                             HStack(spacing: 5) {
                                 Text(slice.sourceType.displayName.uppercased())
@@ -1083,7 +1083,7 @@ struct AdvancedOutputView: View {
                                 if hasMesh {
                                     Text("MESH \(slice.meshWarp.cols)x\(slice.meshWarp.rows)")
                                         .font(.system(size: 8, weight: .heavy, design: .monospaced))
-                                        .foregroundColor(R.opacity(0.5))
+                                        .foregroundColor(R.opacity(0.8))
                                         .lineLimit(1).fixedSize()
                                 }
                                 Text(String(format: "%.0f%%x%.0f%%", slice.outputW * 100, slice.outputH * 100))
@@ -1127,9 +1127,9 @@ struct AdvancedOutputView: View {
                     }
                     .padding(.vertical, 9)
                     .padding(.horizontal, 8)
-                    .background(isSel ? R.opacity(0.14) : Color.white.opacity(0.04))
+                    .background(isSel ? R.opacity(0.14) : Color.white.opacity(0.09))
                     .overlay(
-                        Rectangle().stroke(isSel ? R.opacity(0.4) : Color.white.opacity(0.08), lineWidth: 0.5)
+                        Rectangle().stroke(isSel ? R.opacity(0.4) : Color.white.opacity(0.14), lineWidth: 0.5)
                     )
                 }
                 .buttonStyle(.plain)
@@ -1195,7 +1195,7 @@ struct AdvancedOutputView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("SOURCE")
                     .font(.system(size: sf(7, sc), weight: .heavy, design: .monospaced))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                 let cols = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
                 LazyVGrid(columns: cols, spacing: 3) {
                     ForEach(SliceSource.allCases) { src in
@@ -1205,11 +1205,11 @@ struct AdvancedOutputView: View {
                             Text(src.displayName)
                                 .font(.system(size: sf(8, sc), weight: .black, design: .monospaced))
                                 .lineLimit(1).minimumScaleFactor(0.7)
-                                .foregroundColor(slice.wrappedValue.sourceType == src ? .white : .gray)
+                                .foregroundColor(slice.wrappedValue.sourceType == src ? .white : .wmSecondary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, scaled(4, sc))
-                                .background(slice.wrappedValue.sourceType == src ? R.opacity(0.35) : Color.white.opacity(0.05))
-                                .overlay(Rectangle().stroke(slice.wrappedValue.sourceType == src ? R : Color.white.opacity(0.08), lineWidth: 0.5))
+                                .background(slice.wrappedValue.sourceType == src ? R.opacity(0.35) : Color.white.opacity(0.10))
+                                .overlay(Rectangle().stroke(slice.wrappedValue.sourceType == src ? R : Color.white.opacity(0.14), lineWidth: 0.5))
                         }
                         .buttonStyle(TactileButtonStyle())
                     }
@@ -1229,7 +1229,7 @@ struct AdvancedOutputView: View {
                     slice.wrappedValue.warpTL = .topLeft; slice.wrappedValue.warpTR = .topRight
                     slice.wrappedValue.warpBL = .bottomLeft; slice.wrappedValue.warpBR = .bottomRight
                 } label: {
-                    Text("RESET").font(.system(size: sf(7, sc), weight: .black, design: .monospaced)).foregroundColor(.gray)
+                    Text("RESET").font(.system(size: sf(7, sc), weight: .black, design: .monospaced)).foregroundColor(.wmSecondary)
                 }
             }
 
@@ -1270,7 +1270,7 @@ struct AdvancedOutputView: View {
                 Button {
                     slice.wrappedValue.resetBlend()
                 } label: {
-                    Text("RESET").font(.system(size: sf(7, sc), weight: .black, design: .monospaced)).foregroundColor(.gray)
+                    Text("RESET").font(.system(size: sf(7, sc), weight: .black, design: .monospaced)).foregroundColor(.wmSecondary)
                 }
             }
             HStack(spacing: scaled(6, sc)) {
@@ -1304,7 +1304,7 @@ struct AdvancedOutputView: View {
             if slice.wrappedValue.meshWarpEnabled {
                 HStack(spacing: scaled(4, sc)) {
                     Text("GRID: \(slice.wrappedValue.meshWarp.cols)x\(slice.wrappedValue.meshWarp.rows)")
-                        .font(.system(size: sf(8, sc), weight: .heavy, design: .monospaced)).foregroundColor(.gray)
+                        .font(.system(size: sf(8, sc), weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary)
                     Button {
                         let si = outputConfig.selectedScreenIndex
                         let sli = outputConfig.selectedSliceIndex
@@ -1314,7 +1314,7 @@ struct AdvancedOutputView: View {
                     } label: {
                         Text("ADD").font(.system(size: sf(7, sc), weight: .black, design: .monospaced))
                             .foregroundColor(R).padding(.horizontal, scaled(6, sc)).padding(.vertical, scaled(3, sc))
-                            .background(R.opacity(0.1))
+                            .background(R.opacity(0.2))
                     }.buttonStyle(TactileButtonStyle())
                     Button {
                         let si = outputConfig.selectedScreenIndex
@@ -1324,8 +1324,8 @@ struct AdvancedOutputView: View {
                         }
                     } label: {
                         Text("RESET").font(.system(size: sf(7, sc), weight: .black, design: .monospaced))
-                            .foregroundColor(.gray).padding(.horizontal, scaled(6, sc)).padding(.vertical, scaled(3, sc))
-                            .background(Color.white.opacity(0.03))
+                            .foregroundColor(.wmSecondary).padding(.horizontal, scaled(6, sc)).padding(.vertical, scaled(3, sc))
+                            .background(Color.white.opacity(0.07))
                     }.buttonStyle(TactileButtonStyle())
                 }
 
@@ -1356,7 +1356,7 @@ struct AdvancedOutputView: View {
             let idx = outputConfig.selectedScreenIndex
             if idx < outputConfig.screens.count && outputConfig.screens[idx].destination == .ndi {
                 HStack(spacing: scaled(3, sc)) {
-                    Text("NAME").font(.system(size: sf(8, sc), weight: .heavy, design: .monospaced)).foregroundColor(.gray)
+                    Text("NAME").font(.system(size: sf(8, sc), weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary)
                     TextField("", text: Binding(
                         get: { outputConfig.screens[idx].ndiOutputName },
                         set: { outputConfig.screens[idx].ndiOutputName = $0 }
@@ -1382,7 +1382,7 @@ struct AdvancedOutputView: View {
             } label: {
                 Image(systemName: "minus")
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                     .frame(width: 18, height: 18)
             }.buttonStyle(.plain)
 
@@ -1393,7 +1393,7 @@ struct AdvancedOutputView: View {
                 .textFieldStyle(.plain)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 3)
-                .background(Color.white.opacity(0.05))
+                .background(Color.white.opacity(0.10))
                 .onChange(of: val.wrappedValue) { _, newVal in
                     val.wrappedValue = min(range.upperBound, max(range.lowerBound, newVal))
                 }
@@ -1403,7 +1403,7 @@ struct AdvancedOutputView: View {
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                     .frame(width: 18, height: 18)
             }.buttonStyle(.plain)
         }
@@ -1423,7 +1423,7 @@ struct AdvancedOutputView: View {
                 .textFieldStyle(.plain)
                 .frame(width: scaled(50, sc))
                 .padding(.vertical, scaled(2, sc))
-                .background(Color.white.opacity(0.04))
+                .background(Color.white.opacity(0.09))
         }
     }
 
@@ -1439,9 +1439,9 @@ struct AdvancedOutputView: View {
                 Image(systemName: "network").font(.system(size: sf(9, sc), weight: .bold))
                 Text("NDI").font(.system(size: sf(7, sc), weight: .black, design: .monospaced))
             }
-            .foregroundColor(anyNDI ? .green : .gray)
+            .foregroundColor(anyNDI ? .green : .wmSecondary)
             .padding(.horizontal, scaled(6, sc)).padding(.vertical, scaled(3, sc))
-            .background(anyNDI ? Color.green.opacity(0.15) : Color.white.opacity(0.03))
+            .background(anyNDI ? Color.green.opacity(0.15) : Color.white.opacity(0.07))
         }
         .buttonStyle(TactileButtonStyle())
         .popover(isPresented: $showNDIPopover) {
@@ -1471,7 +1471,7 @@ struct AdvancedOutputView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("PROGRAM")
                         .font(.system(size: 9, weight: .black, design: .monospaced))
-                        .foregroundColor(outputConfig.globalNDIOutput ? .white : .gray)
+                        .foregroundColor(outputConfig.globalNDIOutput ? .white : .wmSecondary)
                     TextField("Name", text: Binding(
                         get: { outputConfig.globalNDIName },
                         set: { outputConfig.globalNDIName = $0 }
@@ -1479,17 +1479,17 @@ struct AdvancedOutputView: View {
                     .font(.system(size: 9, design: .monospaced))
                     .textFieldStyle(.plain)
                     .padding(3)
-                    .background(Color.white.opacity(0.05))
+                    .background(Color.white.opacity(0.10))
                 }
             }
             .padding(.vertical, 2)
 
-            Rectangle().fill(Color.white.opacity(0.06)).frame(height: 1)
+            Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1)
 
             // Per-screen NDI sends
             Text("SCREEN SENDS")
                 .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
 
             ForEach(Array(outputConfig.screens.enumerated()), id: \.element.id) { i, screen in
                 HStack(spacing: 6) {
@@ -1504,7 +1504,7 @@ struct AdvancedOutputView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(screen.name)
                             .font(.system(size: 8, weight: .heavy, design: .monospaced))
-                            .foregroundColor(screen.ndiOutputEnabled ? .white : .gray)
+                            .foregroundColor(screen.ndiOutputEnabled ? .white : .wmSecondary)
                         TextField("NDI Name", text: Binding(
                             get: { outputConfig.screens[i].ndiOutputName },
                             set: { outputConfig.screens[i].ndiOutputName = $0 }
@@ -1512,7 +1512,7 @@ struct AdvancedOutputView: View {
                         .font(.system(size: 8, design: .monospaced))
                         .textFieldStyle(.plain)
                         .padding(2)
-                        .background(Color.white.opacity(0.05))
+                        .background(Color.white.opacity(0.10))
                     }
                 }
                 .padding(.vertical, 1)

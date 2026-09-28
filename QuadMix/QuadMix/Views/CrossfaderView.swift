@@ -13,12 +13,12 @@ struct CrossfaderView: View {
             HStack(spacing: 0) {
                 Text("A:")
                     .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                 channelPicker(selection: $channelA)
                 Spacer()
                 Text("B:")
                     .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                 channelPicker(selection: $channelB)
             }
 
@@ -27,15 +27,15 @@ struct CrossfaderView: View {
                 ZStack(alignment: .leading) {
                     // Track
                     Rectangle()
-                        .fill(Color.white.opacity(0.06))
+                        .fill(Color.white.opacity(0.12))
                         .frame(height: 20)
                         .overlay(
-                            Rectangle().stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                            Rectangle().stroke(Color.white.opacity(0.14), lineWidth: 0.5)
                         )
 
                     // Center mark
                     Rectangle()
-                        .fill(Color.white.opacity(0.1))
+                        .fill(Color.white.opacity(0.17))
                         .frame(width: 1, height: 14)
                         .offset(x: geo.size.width / 2 - 0.5)
 
@@ -98,7 +98,7 @@ struct TapTempoView: View {
 
             Text("BPM")
                 .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                .foregroundColor(accent.opacity(0.5))
+                .foregroundColor(accent.opacity(0.85))
                 .tracking(1)
 
             // Tap button
@@ -192,13 +192,13 @@ struct PresetControlView: View {
                     Text("LOAD")
                         .font(.system(size: 7, weight: .heavy, design: .monospaced))
                 }
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 5)
                 .background(
                     Rectangle()
-                        .fill(Color.white.opacity(0.03))
-                        .overlay(Rectangle().stroke(Color.white.opacity(0.06), lineWidth: 0.5))
+                        .fill(Color.white.opacity(0.07))
+                        .overlay(Rectangle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                 )
             }
             .buttonStyle(TactileButtonStyle())

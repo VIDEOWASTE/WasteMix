@@ -28,6 +28,22 @@ final class MixerState {
     var crossfaderA: Set<Int> = [0]
     var crossfaderB: Set<Int> = [1]
 
+    /// Fader levels captured by FADE TO BLACK so RECALL can restore them.
+    /// Non-nil means the mixer is deliberately blacked out.
+    var preFadeLevels: [Float]? = nil
+
+    /// Called when the user picks a source for a channel. If nothing is on
+    /// program yet (no other channel has a source with its fader up) and the
+    /// mixer isn't in a deliberate fade-to-black, bring this channel's fader
+    /// to full so the first source shows up immediately. Mid-show, when
+    /// another channel is live, the new source stays at its current level.
+    func autoRaiseFaderIfNothingLive(for channel: Channel) {
+        guard preFadeLevels == nil, channel.faderLevel <= 0.001 else { return }
+        let otherLive = channels.contains { $0.id != channel.id && $0.isActive }
+        guard !otherLive else { return }
+        channel.faderLevel = 1.0
+    }
+
     init() {
         loadPersistedSettings()
     }

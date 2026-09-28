@@ -15,13 +15,13 @@ struct MiniMasterView: View {
             HStack(spacing: 4) {
                 Text("A:\(crossfaderA + 1)")
                     .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                     .frame(width: 20)
 
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
-                        Rectangle().fill(Color.white.opacity(0.06)).frame(height: 16)
-                        Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1, height: 10)
+                        Rectangle().fill(Color.white.opacity(0.12)).frame(height: 16)
+                        Rectangle().fill(Color.white.opacity(0.14)).frame(width: 1, height: 10)
                             .offset(x: geo.size.width / 2 - 0.5)
                         Rectangle().fill(Color.white).frame(width: 24, height: 14)
                             .offset(x: CGFloat(crossfaderPos) * (geo.size.width - 24))
@@ -39,7 +39,7 @@ struct MiniMasterView: View {
 
                 Text("B:\(crossfaderB + 1)")
                     .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                     .frame(width: 20)
             }
 
@@ -73,7 +73,7 @@ struct MiniMasterView: View {
                         .padding(.vertical, 5)
                         .background(
                             Rectangle()
-                                .fill(Color.white.opacity(0.06))
+                                .fill(Color.white.opacity(0.12))
                         )
                 }
                 .buttonStyle(TactileButtonStyle())
@@ -98,10 +98,10 @@ struct MiniMasterView: View {
         .padding(.vertical, 5)
         .background(
             Rectangle()
-                .fill(Color(red: 0.06, green: 0.06, blue: 0.07))
+                .fill(Color(red: 0.09, green: 0.09, blue: 0.10))
                 .overlay(
                     Rectangle()
-                        .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                        .stroke(Color.white.opacity(0.14), lineWidth: 0.5)
                 )
         )
     }
@@ -116,7 +116,7 @@ struct MiniMasterView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 5)
             .background(
-                Rectangle().fill(Color.white.opacity(0.03))
+                Rectangle().fill(Color.white.opacity(0.07))
             )
         }
         .buttonStyle(TactileButtonStyle())

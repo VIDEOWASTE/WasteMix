@@ -23,7 +23,7 @@ struct AboutView: View {
                             .tracking(4)
                         Text(version)
                             .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                            .foregroundColor(.gray)
+                            .foregroundColor(.wmSecondary)
                     }
 
                     Divider()
@@ -43,7 +43,7 @@ struct AboutView: View {
                             .foregroundColor(.white.opacity(0.85))
                         Text("Copyright © 2014–2026 Vizrt NDI AB. All rights reserved.")
                             .font(.system(size: 11))
-                            .foregroundColor(.gray)
+                            .foregroundColor(.wmSecondary)
                         Link("ndi.video", destination: URL(string: "https://ndi.video")!)
                             .font(.system(size: 11, weight: .heavy, design: .monospaced))
                             .foregroundColor(R)
@@ -65,7 +65,7 @@ struct AboutView: View {
                 }
                 .padding(20)
             }
-            .background(Color(red: 0.04, green: 0.04, blue: 0.05))
+            .background(Color(red: 0.07, green: 0.07, blue: 0.08))
             .navigationTitle("About")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

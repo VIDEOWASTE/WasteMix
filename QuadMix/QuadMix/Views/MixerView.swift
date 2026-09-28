@@ -14,7 +14,10 @@ struct MixerView: View {
     /// Snapshot of channel faders captured the moment the user hits FADE TO
     /// BLACK, so RECALL can restore them. `nil` means there's nothing to
     /// recall (no fade has happened, or the user has touched faders since).
-    @State private var preFadeLevels: [Float]? = nil
+    /// Measured unscaled height of the channel strips + master section,
+    /// fed back into the fit-to-window scale so layout changes can't push
+    /// controls off-screen.
+    @State private var measuredContentH: CGFloat = 560
 
     // Unified panel system — replaces all sheets
     enum PanelType: Equatable {
@@ -50,9 +53,8 @@ struct MixerView: View {
             let chromePad: CGFloat = 8
             let contentH = max(180, h - topBarH - monitorH - chromePad)
             // Natural unscaled height of the channels HStack + master
-            // VStack. Empirical baseline; bump if the layout grows
-            // vertically.
-            let naturalContentH: CGFloat = 560
+            // VStack, measured from the live layout below.
+            let naturalContentH = max(measuredContentH, 300)
             let naturalContentW: CGFloat = 500
             let scaleW = w / naturalContentW
             let scaleH = contentH / naturalContentH
@@ -75,6 +77,10 @@ struct MixerView: View {
 
                         masterSection(width: w)
                             .padding(.horizontal, 3).padding(.top, 4).padding(.bottom, 8)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { newH in
+                        if abs(newH - measuredContentH) > 1 { measuredContentH = newH }
                     }
                     .scaleEffect(scaleFactor, anchor: .topLeading)
                     .frame(width: w / scaleFactor, alignment: .leading)
@@ -131,7 +137,7 @@ struct MixerView: View {
                 .buttonStyle(TactileButtonStyle())
             }
             .padding(.horizontal, 12).padding(.vertical, 8)
-            .background(Color(red: 0.05, green: 0.05, blue: 0.06))
+            .background(Color(red: 0.09, green: 0.09, blue: 0.10))
 
             Rectangle().fill(R.opacity(0.2)).frame(height: 1)
 
@@ -141,7 +147,7 @@ struct MixerView: View {
             }
         }
         .font(.system(size: 10 * fs, design: .monospaced))
-        .background(Color(red: 0.04, green: 0.04, blue: 0.05))
+        .background(Color(red: 0.07, green: 0.07, blue: 0.08))
     }
 
     @ViewBuilder
@@ -239,42 +245,58 @@ struct MixerView: View {
             Button { showAbout = true; Haptics.tap() } label: {
                 Text("WASTEMIX")
                     .font(.system(size: 11, weight: .black, design: .monospaced))
-                    .foregroundColor(R.opacity(0.7))
+                    .foregroundColor(R.opacity(0.9))
                     .tracking(3)
             }
             .buttonStyle(.plain)
             HStack {
+                // Visible entry point to About (NDI® attribution + credits);
+                // tapping the WASTEMIX title does the same.
+                Button { showAbout = true; Haptics.tap() } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.wmSecondary)
+                        .frame(width: 30, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("About WasteMix")
                 Spacer()
                 Circle().fill(R.opacity(0.5)).frame(width: 5, height: 5)
                 Text("\(mixerState.frameRate)fps")
                     .font(.system(size: 8, weight: .medium, design: .monospaced))
-                    .foregroundColor(R.opacity(0.5))
+                    .foregroundColor(R.opacity(0.8))
             }
         }
         .padding(.horizontal, 10)
         .padding(.top, 6)
         .padding(.bottom, 3)
-        .background(Color(red: 0.04, green: 0.04, blue: 0.05))
+        .background(Color(red: 0.07, green: 0.07, blue: 0.08))
         .sheet(isPresented: $showAbout) { AboutView() }
     }
 
     // MARK: - Monitors
 
     private var monitors: some View {
-        HStack(spacing: 1) {
-            monBox("PVW", R) {
+        let pvwChannel = mixerState.selectedPreviewChannel
+        let pvwEmpty = pvwChannel < mixerState.channels.count && mixerState.channels[pvwChannel].source == nil
+        let allEmpty = mixerState.channels.allSatisfy { $0.source == nil }
+        return HStack(spacing: 1) {
+            monBox("PVW", R, hint: pvwEmpty ? "CH\(pvwChannel + 1) HAS NO SOURCE\nTap SOURCE below to add one" : nil) {
                 PreviewView(device: MetalContext.shared.device, textureProvider: {
                     let i = mixerState.selectedPreviewChannel
                     guard i < renderEngine.channelPreviewTextures.count else { return nil }
                     return renderEngine.channelPreviewTextures[i]
                 })
             }
-            monBox("PGM", .red) { ProgramOutputView(renderEngine: renderEngine) }
+            monBox("PGM", .red, hint: allEmpty ? "NO OUTPUT YET\nAdd a source and raise its fader" : nil) {
+                ProgramOutputView(renderEngine: renderEngine)
+            }
         }
         .padding(2).background(Color(red: 0.02, green: 0.02, blue: 0.025))
     }
 
-    private func monBox<C: View>(_ label: String, _ tint: Color, @ViewBuilder c: () -> C) -> some View {
+    private func monBox<C: View>(_ label: String, _ tint: Color, hint: String? = nil, @ViewBuilder c: () -> C) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 4) {
                 Spacer()
@@ -289,6 +311,19 @@ struct MixerView: View {
 
             c().aspectRatio(16/9, contentMode: .fit)
                 .overlay(Rectangle().stroke(tint.opacity(0.15), lineWidth: 0.5))
+                .overlay {
+                    // First-run guidance so empty monitors don't read as broken.
+                    if let hint {
+                        Text(hint)
+                            .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                            .foregroundColor(.wmSecondary)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                            .minimumScaleFactor(0.6)
+                            .padding(12)
+                            .allowsHitTesting(false)
+                    }
+                }
         }
     }
 
@@ -306,8 +341,11 @@ struct MixerView: View {
             // active preview, plus a saturated background, so the PVW
             // selection reads at a glance instead of needing the user to
             // hunt for the small "PVW" label.
+            // Fixed 5pt slot so selecting a channel doesn't push its
+            // contents down relative to the other strips.
             Rectangle().fill(c).frame(height: sel ? 5 : 2)
                 .shadow(color: sel ? c.opacity(0.6) : .clear, radius: 4)
+                .frame(height: 5, alignment: .bottom)
             Button { mixerState.selectedPreviewChannel = i; Haptics.tap() } label: {
                 HStack(spacing: 4) {
                     Text("CH\(i+1)")
@@ -357,7 +395,7 @@ struct MixerView: View {
                         Text(ch.blendMode.shortLabel).font(.system(size: 9, weight: .black, design: .monospaced))
                             .foregroundColor(ch.blendMode != .normal ? .white : .white.opacity(0.8))
                         Spacer()
-                        Image(systemName: "chevron.compact.down").font(.system(size: 8)).foregroundColor(.gray)
+                        Image(systemName: "chevron.compact.down").font(.system(size: 8)).foregroundColor(.wmSecondary)
                     }
                     .contentShape(Rectangle())
                 }.menuStyle(.borderlessButton)
@@ -370,9 +408,11 @@ struct MixerView: View {
             }
             edge(c)
 
-            // Transition + GO
+            // Transition + GO. GO sits centered (not above PARAMS in the row
+            // below) with a bigger hit target and a gap under the row, so
+            // reaching for GO doesn't land on PARAMS.
             sharpCell(c) {
-                HStack(spacing: 2) {
+                ZStack {
                     Menu {
                         ForEach(TransitionType.allCases) { t in
                             Button { ch.transitionConfig.type = t; Haptics.tap() } label: {
@@ -396,14 +436,17 @@ struct MixerView: View {
                         Haptics.thud()
                     } label: {
                         Text(ch.isTransitioning ? "STOP" : "GO")
-                            .font(.system(size: 9, weight: .black, design: .monospaced))
-                            .foregroundColor(ch.isTransitioning ? .black : c)
-                            .padding(.horizontal, 6).padding(.vertical, 4)
-                            .background(ch.isTransitioning ? R : c.opacity(0.4))
+                            .font(.system(size: 10, weight: .black, design: .monospaced))
+                            .foregroundColor(ch.isTransitioning ? .black : .white)
+                            .frame(minWidth: 34)
+                            .padding(.horizontal, 10).padding(.vertical, 7)
+                            .background(ch.isTransitioning ? R : c.opacity(0.6))
+                            .contentShape(Rectangle())
                     }.buttonStyle(TactileButtonStyle())
                 }
             }
             edge(c)
+            Color.clear.frame(height: 8)
 
             // FX type + params button
             sharpCell(c) {
@@ -427,7 +470,7 @@ struct MixerView: View {
                     } label: {
                         HStack(spacing: 3) {
                             Image(systemName: ch.effectType != .none ? ch.effectType.icon : "wand.and.stars")
-                                .font(.system(size: 9)).foregroundColor(ch.effectType != .none ? c : .gray)
+                                .font(.system(size: 9)).foregroundColor(ch.effectType != .none ? c : .white.opacity(0.85))
                             Text(ch.effectType != .none ? ch.effectType.displayName : "FX")
                                 .font(.system(size: 9, weight: .black, design: .monospaced))
                                 .foregroundColor(ch.effectType != .none ? .white : .white.opacity(0.8))
@@ -448,10 +491,14 @@ struct MixerView: View {
                 Rectangle().fill(c.opacity(0.25)).frame(width: 1)
                 ChannelColorButton(channel: ch, color: c, onTap: { activePanel = .color(i) })
             }
+            // Size to the buttons — without this the 1pt divider is
+            // vertically greedy and stretches the whole channel strip,
+            // pushing the master section off-screen in portrait.
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 3).padding(.vertical, 2)
         }
         .frame(maxWidth: .infinity)
-        .background(Color(red: 0.045, green: 0.045, blue: 0.05))
+        .background(Color(red: 0.085, green: 0.085, blue: 0.095))
     }
 
     /// Sharp-edged cell wrapper — no rounded corners
@@ -487,7 +534,7 @@ struct MixerView: View {
                 VStack(spacing: 4) {
                     // A selector — multi-select
                     HStack(spacing: 2) {
-                        Text("A").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(R.opacity(0.5)).frame(width: 12)
+                        Text("A").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(R.opacity(0.8)).frame(width: 12)
                         ForEach(0..<4) { i in
                             chSelectBtn(i, selected: mixerState.crossfaderA.contains(i)) {
                                 if mixerState.crossfaderA.contains(i) { mixerState.crossfaderA.remove(i) }
@@ -499,9 +546,9 @@ struct MixerView: View {
                     // Slider
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            Rectangle().fill(Color.white.opacity(0.06)).frame(height: 24)
-                                .overlay(Rectangle().stroke(Color.white.opacity(0.06), lineWidth: 0.5))
-                            Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1, height: 14).offset(x: geo.size.width / 2)
+                            Rectangle().fill(Color.white.opacity(0.12)).frame(height: 24)
+                                .overlay(Rectangle().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+                            Rectangle().fill(Color.white.opacity(0.14)).frame(width: 1, height: 14).offset(x: geo.size.width / 2)
                             Rectangle().fill(R).frame(width: 32, height: 22)
                                 .shadow(color: R.opacity(0.3), radius: 2)
                                 .offset(x: CGFloat(mixerState.crossfaderPos) * (geo.size.width - 32))
@@ -515,7 +562,7 @@ struct MixerView: View {
 
                     // B selector — multi-select
                     HStack(spacing: 2) {
-                        Text("B").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(R.opacity(0.5)).frame(width: 12)
+                        Text("B").font(.system(size: 7, weight: .heavy, design: .monospaced)).foregroundColor(R.opacity(0.8)).frame(width: 12)
                         ForEach(0..<4) { i in
                             chSelectBtn(i, selected: mixerState.crossfaderB.contains(i)) {
                                 if mixerState.crossfaderB.contains(i) { mixerState.crossfaderB.remove(i) }
@@ -524,7 +571,7 @@ struct MixerView: View {
                         }
                     }
 
-                    Rectangle().fill(R.opacity(0.06)).frame(height: 0.5).padding(.vertical, 2)
+                    Rectangle().fill(R.opacity(0.15)).frame(height: 0.5).padding(.vertical, 2)
 
                     // Master LFO — sits between crossfader and tempo so the
                     // automation lives next to the controls it modulates.
@@ -543,10 +590,10 @@ struct MixerView: View {
                                         .font(.system(size: 8, weight: .heavy, design: .monospaced))
                                 }
                             }
-                            .foregroundColor(mlOn ? R : .gray)
+                            .foregroundColor(mlOn ? R : .wmSecondary)
                             .padding(.horizontal, 8).padding(.vertical, 8)
-                            .background(Rectangle().fill(mlOn ? R.opacity(0.25) : Color.white.opacity(0.03))
-                                .overlay(Rectangle().stroke(mlOn ? R.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 0.5)))
+                            .background(Rectangle().fill(mlOn ? R.opacity(0.25) : Color.white.opacity(0.07))
+                                .overlay(Rectangle().stroke(mlOn ? R.opacity(0.5) : Color.white.opacity(0.17), lineWidth: 0.5)))
                             .contentShape(Rectangle())
                         }.buttonStyle(TactileButtonStyle())
 
@@ -563,7 +610,7 @@ struct MixerView: View {
                         }.buttonStyle(TactileButtonStyle())
                     }
 
-                    Rectangle().fill(R.opacity(0.06)).frame(height: 0.5).padding(.vertical, 2)
+                    Rectangle().fill(R.opacity(0.15)).frame(height: 0.5).padding(.vertical, 2)
 
                     // Tap tempo
                     TapTempoView(bpm: Binding(get: { mixerState.bpm }, set: { mixerState.bpm = $0 }))
@@ -571,7 +618,7 @@ struct MixerView: View {
                 .padding(6)
                 .frame(maxWidth: .infinity)
 
-                Rectangle().fill(R.opacity(0.06)).frame(width: 0.5)
+                Rectangle().fill(R.opacity(0.15)).frame(width: 0.5)
 
                 // Right column: global color, quick, tempo, presets
                 VStack(spacing: 0) {
@@ -581,20 +628,20 @@ struct MixerView: View {
                         Button { activePanel = .globalColor; Haptics.tap() } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "paintpalette.fill").font(.system(size: 11))
-                                Text("GLOBAL COLOR").font(.system(size: 9, weight: .black, design: .monospaced))
+                                Text("GLOBAL COLOR").font(.system(size: 10, weight: .black, design: .monospaced))
                                     .lineLimit(1).minimumScaleFactor(0.7)
                                 Spacer()
                                 if active { Circle().fill(R).frame(width: 6, height: 6).shadow(color: R.opacity(0.5), radius: 3) }
                             }
-                            .foregroundColor(active ? R : .gray)
+                            .foregroundColor(active ? R : .white.opacity(0.85))
                             .padding(.horizontal, 8).padding(.vertical, 7)
-                            .background(Rectangle().fill(active ? R.opacity(0.3) : Color.white.opacity(0.03))
-                                .overlay(Rectangle().stroke(active ? R.opacity(0.3) : Color.white.opacity(0.1), lineWidth: 0.5)))
+                            .background(Rectangle().fill(active ? R.opacity(0.3) : Color.white.opacity(0.07))
+                                .overlay(Rectangle().stroke(active ? R.opacity(0.3) : Color.white.opacity(0.17), lineWidth: 0.5)))
                             .contentShape(Rectangle())
                         }.buttonStyle(TactileButtonStyle())
                     }
 
-                    Rectangle().fill(R.opacity(0.04)).frame(height: 0.5)
+                    Rectangle().fill(R.opacity(0.12)).frame(height: 0.5)
 
                     // Fade to black + recall (restores pre-fade fader values)
                     mstCellView {
@@ -606,7 +653,7 @@ struct MixerView: View {
                                 // Snapshot current levels before fading so the
                                 // user can recall them. Skip channels already
                                 // at 0 — recalling a true-zero is pointless.
-                                preFadeLevels = mixerState.channels.map { $0.faderLevel }
+                                mixerState.preFadeLevels = mixerState.channels.map { $0.faderLevel }
                                 for ch in mixerState.channels {
                                     if ch.faderLevel > 0.001 {
                                         renderEngine.transitionEngine.triggerTransition(channel: ch, targetLevel: 0)
@@ -620,9 +667,9 @@ struct MixerView: View {
                                         .tracking(0.5)
                                         .lineLimit(1).minimumScaleFactor(0.7)
                                 }
-                                .foregroundColor(canFade ? .white : R.opacity(0.4))
+                                .foregroundColor(canFade ? .white : R.opacity(0.55))
                                 .frame(maxWidth: .infinity).padding(.vertical, 10)
-                                .background(canFade ? R.opacity(0.45) : R.opacity(0.08))
+                                .background(canFade ? R.opacity(0.45) : R.opacity(0.18))
                                 .overlay(Rectangle().stroke(canFade ? R : R.opacity(0.2), lineWidth: 1))
                             }
                             .buttonStyle(TactileButtonStyle())
@@ -630,15 +677,15 @@ struct MixerView: View {
 
                             // RECALL — restore the snapshot. Disabled until
                             // a fade has actually happened.
-                            let canRecall = preFadeLevels != nil
+                            let canRecall = mixerState.preFadeLevels != nil
                             Button {
-                                guard let snap = preFadeLevels else { return }
+                                guard let snap = mixerState.preFadeLevels else { return }
                                 for (i, level) in snap.enumerated() where i < mixerState.channels.count {
                                     if level > 0.001 {
                                         renderEngine.transitionEngine.triggerTransition(channel: mixerState.channels[i], targetLevel: level)
                                     }
                                 }
-                                preFadeLevels = nil
+                                mixerState.preFadeLevels = nil
                                 Haptics.thud()
                             } label: {
                                 HStack(spacing: 3) {
@@ -646,9 +693,9 @@ struct MixerView: View {
                                     Text("RECALL").font(.system(size: 9, weight: .black, design: .monospaced))
                                         .lineLimit(1).minimumScaleFactor(0.7)
                                 }
-                                .foregroundColor(canRecall ? .white : R.opacity(0.4))
+                                .foregroundColor(canRecall ? .white : R.opacity(0.55))
                                 .frame(maxWidth: .infinity).padding(.vertical, 10)
-                                .background(canRecall ? R.opacity(0.45) : R.opacity(0.08))
+                                .background(canRecall ? R.opacity(0.45) : R.opacity(0.18))
                                 .overlay(Rectangle().stroke(canRecall ? R : R.opacity(0.2), lineWidth: 1))
                             }
                             .buttonStyle(TactileButtonStyle())
@@ -664,49 +711,56 @@ struct MixerView: View {
                     // the other.
                     Spacer(minLength: 28)
 
-                    Rectangle().fill(R.opacity(0.04)).frame(height: 0.5)
+                    Rectangle().fill(R.opacity(0.12)).frame(height: 0.5)
 
-                    // Advanced Output — opens separate window.
-                    // Dimmed when closed; brightens when active.
+                    // Advanced Output — opens separate window. The primary
+                    // destination off the mixer, so it's the loudest control
+                    // in the master section; goes solid red while open.
                     mstCellView {
                         let active = renderEngine.outputConfig.isAdvancedOutputOpen
                         Button {
                             openAdvancedOutput()
                             Haptics.tap()
                         } label: {
-                            HStack(spacing: 6) {
+                            HStack(spacing: 8) {
                                 Image(systemName: "rectangle.on.rectangle.angled")
-                                    .font(.system(size: 14, weight: .bold))
-                                VStack(alignment: .leading, spacing: 1) {
+                                    .font(.system(size: 18, weight: .bold))
+                                VStack(alignment: .leading, spacing: 2) {
                                     Text("ADVANCED OUTPUT")
-                                        .font(.system(size: 10, weight: .black, design: .monospaced))
+                                        .font(.system(size: 12, weight: .black, design: .monospaced))
                                         .tracking(1)
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.7)
-                                    Text("MAPPING")
+                                    Text(active ? "MAPPING · OPEN" : "MAPPING")
                                         .font(.system(size: 8, weight: .heavy, design: .monospaced))
                                         .tracking(2)
-                                        .opacity(0.7)
+                                        .opacity(0.85)
                                 }
                                 Spacer()
                                 Image(systemName: "arrow.up.forward.app.fill")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 15))
                             }
-                            .foregroundColor(active ? .white : R.opacity(0.7))
-                            .frame(maxWidth: .infinity).padding(.vertical, 11).padding(.horizontal, 10)
-                            .background(active ? R.opacity(0.45) : R.opacity(0.10))
-                            .overlay(Rectangle().stroke(active ? R : R.opacity(0.35), lineWidth: active ? 1 : 0.5))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity).padding(.vertical, 14).padding(.horizontal, 12)
+                            .background(
+                                active
+                                    ? AnyShapeStyle(R)
+                                    : AnyShapeStyle(LinearGradient(colors: [R.opacity(0.6), R.opacity(0.32)],
+                                                                   startPoint: .topLeading, endPoint: .bottomTrailing))
+                            )
+                            .overlay(Rectangle().stroke(active ? Color.white.opacity(0.7) : R, lineWidth: 1.5))
+                            .shadow(color: R.opacity(active ? 0.7 : 0.4), radius: active ? 10 : 6)
                         }
                         .buttonStyle(TactileButtonStyle())
                     }
 
-                    Rectangle().fill(R.opacity(0.04)).frame(height: 0.5)
+                    Rectangle().fill(R.opacity(0.12)).frame(height: 0.5)
 
                     // Presets — sit at the bottom of the master right column
                     // so the heavier Advanced Output button reads first.
                     mstCellView {
                         HStack(spacing: 3) {
-                            bigMstBtn("SAVE", icon: "square.and.arrow.down", fg: R.opacity(0.7), bg: Color(red: 1.0, green: 0.15, blue: 0.15).opacity(0.05)) {
+                            bigMstBtn("SAVE", icon: "square.and.arrow.down", fg: R.opacity(0.95), bg: Color(red: 1.0, green: 0.15, blue: 0.15).opacity(0.14)) {
                                 let p = presetManager.capture(from: mixerState, name: "P\(presetManager.presets.count+1)", crossfaderPos: mixerState.crossfaderPos, bpm: mixerState.bpm)
                                 presetManager.save(preset: p); Haptics.success()
                             }
@@ -715,8 +769,8 @@ struct MixerView: View {
                                     Image(systemName: "list.bullet").font(.system(size: 10))
                                     Text("LOAD").font(.system(size: 6, weight: .heavy, design: .monospaced))
                                 }
-                                .foregroundColor(.gray).frame(maxWidth: .infinity).padding(.vertical, 6)
-                                .background(Rectangle().fill(Color.white.opacity(0.03)))
+                                .foregroundColor(.wmSecondary).frame(maxWidth: .infinity).padding(.vertical, 6)
+                                .background(Rectangle().fill(Color.white.opacity(0.07)))
                             }.buttonStyle(TactileButtonStyle())
                         }
                     }
@@ -725,7 +779,7 @@ struct MixerView: View {
                     // recording, button turns red and shows mm:ss elapsed.
                     // Sits next to the MEDIA button so finished clips are
                     // one tap away from being loaded as a channel source.
-                    Rectangle().fill(R.opacity(0.04)).frame(height: 0.5)
+                    Rectangle().fill(R.opacity(0.12)).frame(height: 0.5)
                     mstCellView {
                         HStack(spacing: 3) {
                             ProgramRecordButton(recorder: renderEngine.recorder)
@@ -737,15 +791,17 @@ struct MixerView: View {
                 }
                 .frame(minWidth: 0, maxWidth: .infinity)
             }
+            // Keep the column divider from stretching the section vertically.
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .background(Color(red: 0.04, green: 0.04, blue: 0.05))
+        .background(Color(red: 0.07, green: 0.07, blue: 0.08))
     }
 
     // MARK: - Helpers
 
     private func pill(_ fill: Color) -> some View {
         Rectangle().fill(fill)
-            .overlay(Rectangle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+            .overlay(Rectangle().stroke(Color.white.opacity(0.17), lineWidth: 0.5))
     }
 
     // applyCrossfader was moved to MixerState so the master LFO can call it too.
@@ -753,9 +809,9 @@ struct MixerView: View {
     private func chSelectBtn(_ i: Int, selected: Bool, action: @escaping () -> Void) -> some View {
         Button { action(); Haptics.tap() } label: {
             Text("\(i+1)").font(.system(size: 10, weight: .black, design: .monospaced))
-                .foregroundColor(selected ? .white : .gray)
+                .foregroundColor(selected ? .white : .wmSecondary)
                 .frame(maxWidth: .infinity).padding(.vertical, 5)
-                .background(selected ? R.opacity(0.35) : Color.white.opacity(0.03))
+                .background(selected ? R.opacity(0.35) : Color.white.opacity(0.07))
                 .overlay(
                     VStack(spacing: 0) {
                         Rectangle().fill(selected ? R : Color.clear).frame(height: 2)
@@ -813,11 +869,11 @@ struct SourceButton: View {
                 Text(hasSource ? (channel.source?.displayName ?? "") : "SOURCE")
                     .font(.system(size: 9, weight: .heavy, design: .monospaced)).lineLimit(1)
             }
-            .foregroundColor(hasSource ? .white : color.opacity(0.7))
+            .foregroundColor(hasSource ? .white : color)
             .frame(maxWidth: .infinity).padding(.vertical, 5)
             .background(
-                Rectangle().fill(hasSource ? color.opacity(0.2) : Color.white.opacity(0.04))
-                    .overlay(Rectangle().stroke(color.opacity(hasSource ? 0.2 : 0.08), lineWidth: 0.5))
+                Rectangle().fill(hasSource ? color.opacity(0.2) : color.opacity(0.1))
+                    .overlay(Rectangle().stroke(color.opacity(hasSource ? 0.3 : 0.6), lineWidth: hasSource ? 0.5 : 1))
             )
             .contentShape(Rectangle())
         }.buttonStyle(TactileButtonStyle())
@@ -841,12 +897,13 @@ struct FXParamsButton: View {
             HStack(spacing: 3) {
                 Image(systemName: "slider.horizontal.below.square.and.square.filled")
                     .font(.system(size: 13, weight: .bold))
-                Text("FX").font(.system(size: 10, weight: .black, design: .monospaced))
+                Text("PARAMS").font(.system(size: 10, weight: .black, design: .monospaced))
+                    .lineLimit(1).minimumScaleFactor(0.6)
             }
-            .foregroundColor(hasActivity ? .white : .gray)
+            .foregroundColor(hasActivity ? .white : .wmSecondary)
             .padding(.horizontal, 8).padding(.vertical, 9)
-            .background(hasActivity ? color.opacity(0.3) : Color.white.opacity(0.04))
-            .overlay(Rectangle().stroke(hasActivity ? color : Color.white.opacity(0.1), lineWidth: hasActivity ? 1 : 0.5))
+            .background(hasActivity ? color.opacity(0.3) : Color.white.opacity(0.09))
+            .overlay(Rectangle().stroke(hasActivity ? color : Color.white.opacity(0.17), lineWidth: hasActivity ? 1 : 0.5))
         }
         .buttonStyle(TactileButtonStyle())
     }
@@ -869,7 +926,7 @@ struct FXParamsPanel: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("EFFECT")
                         .font(.system(size: 11, weight: .black, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
 
                     // Grid of effect buttons
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 85), spacing: 4)], spacing: 4) {
@@ -888,9 +945,9 @@ struct FXParamsPanel: View {
                                     Text(fx.displayName).font(.system(size: 9, weight: .black, design: .monospaced))
                                         .lineLimit(1)
                                 }
-                                .foregroundColor(channel.effectType == fx ? .white : .gray)
+                                .foregroundColor(channel.effectType == fx ? .white : .wmSecondary)
                                 .frame(maxWidth: .infinity).padding(.vertical, 6)
-                                .background(channel.effectType == fx ? R.opacity(0.3) : Color.white.opacity(0.03))
+                                .background(channel.effectType == fx ? R.opacity(0.3) : Color.white.opacity(0.07))
                                 .overlay(
                                     VStack(spacing: 0) {
                                         Rectangle().fill(channel.effectType == fx ? R : Color.clear).frame(height: 2)
@@ -911,7 +968,7 @@ struct FXParamsPanel: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("PARAMETERS — \(channel.effectType.displayName.uppercased())")
                             .font(.system(size: 11, weight: .black, design: .monospaced))
-                            .foregroundColor(R.opacity(0.7))
+                            .foregroundColor(R.opacity(0.9))
 
                         ForEach(Array(specs.enumerated()), id: \.offset) { idx, spec in
                             paramSlider(
@@ -923,7 +980,7 @@ struct FXParamsPanel: View {
                         effectDescription
                     }
                     .padding(8)
-                    .background(R.opacity(0.04))
+                    .background(R.opacity(0.12))
                 }
 
                 Divider()
@@ -938,7 +995,7 @@ struct FXParamsPanel: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("KEYING")
                         .font(.system(size: 11, weight: .black, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
 
                     Picker("Type", selection: Binding(
                         get: { channel.keySettings.type },
@@ -984,7 +1041,7 @@ struct FXParamsPanel: View {
                     HStack {
                         Text("FRAMING")
                             .font(.system(size: 11, weight: .black, design: .monospaced))
-                            .foregroundColor(.gray)
+                            .foregroundColor(.wmSecondary)
                         Spacer()
                         if channel.rotation != .auto || channel.fitMode != .fit {
                             Button("Reset") {
@@ -1031,7 +1088,7 @@ struct FXParamsPanel: View {
                         }
                     }())
                     .font(.system(size: 9))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                 }
                 } // end framing (camera / externalCamera)
 
@@ -1042,7 +1099,7 @@ struct FXParamsPanel: View {
                     HStack {
                         Text("PIP / POSITION")
                             .font(.system(size: 11, weight: .black, design: .monospaced))
-                            .foregroundColor(.gray)
+                            .foregroundColor(.wmSecondary)
                         Spacer()
                         Button("Reset") {
                             channel.pipSettings.reset()
@@ -1075,7 +1132,7 @@ struct FXParamsPanel: View {
             }
             .padding()
         }
-        .background(Color(red: 0.06, green: 0.06, blue: 0.07))
+        .background(Color(red: 0.09, green: 0.09, blue: 0.10))
     }
 
     /// Binds slider index to the right channel storage:
@@ -1110,7 +1167,7 @@ struct FXParamsPanel: View {
             HStack {
                 Text(label)
                     .font(.system(size: 10, weight: .black, design: .monospaced))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1146,7 +1203,7 @@ struct FXParamsPanel: View {
         if !desc.isEmpty {
             Text(desc)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.gray)
+                .foregroundColor(.wmSecondary)
                 .padding(.top, 2)
         }
     }
@@ -1166,10 +1223,10 @@ struct AudioReactButton: View {
                 Text("AUDIO").font(.system(size: 9, weight: .heavy, design: .monospaced))
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
-            .foregroundColor(on ? .white : .gray)
+            .foregroundColor(on ? .white : .wmSecondary)
             .frame(maxWidth: .infinity).padding(.vertical, 7)
-            .background(on ? WMRed.opacity(0.4) : Color.white.opacity(0.03))
-            .overlay(Rectangle().stroke(on ? WMRed : Color.white.opacity(0.1), lineWidth: on ? 1 : 0.5))
+            .background(on ? WMRed.opacity(0.4) : Color.white.opacity(0.07))
+            .overlay(Rectangle().stroke(on ? WMRed : Color.white.opacity(0.17), lineWidth: on ? 1 : 0.5))
             .contentShape(Rectangle())
         }.buttonStyle(TactileButtonStyle())
     }
@@ -1186,10 +1243,10 @@ struct ChannelColorButton: View {
                 Text("COLOR").font(.system(size: 9, weight: .heavy, design: .monospaced))
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
-            .foregroundColor(on ? .white : .gray)
+            .foregroundColor(on ? .white : .wmSecondary)
             .frame(maxWidth: .infinity).padding(.vertical, 7)
-            .background(on ? WMRed.opacity(0.4) : Color.white.opacity(0.03))
-            .overlay(Rectangle().stroke(on ? WMRed : Color.white.opacity(0.1), lineWidth: on ? 1 : 0.5))
+            .background(on ? WMRed.opacity(0.4) : Color.white.opacity(0.07))
+            .overlay(Rectangle().stroke(on ? WMRed : Color.white.opacity(0.17), lineWidth: on ? 1 : 0.5))
             .contentShape(Rectangle())
         }.buttonStyle(TactileButtonStyle())
     }
@@ -1228,7 +1285,7 @@ struct ProgramRecordButton: View {
             }
             .frame(maxWidth: .infinity).padding(.vertical, 6)
             .background(
-                Rectangle().fill(recorder.isRecording ? R.opacity(0.45) : R.opacity(0.10))
+                Rectangle().fill(recorder.isRecording ? R.opacity(0.45) : R.opacity(0.2))
             )
             .overlay(
                 Rectangle().stroke(recorder.isRecording ? R : R.opacity(0.35),
@@ -1272,7 +1329,7 @@ struct MediaCenterButton: View {
                     .foregroundColor(.white.opacity(0.85))
             }
             .frame(maxWidth: .infinity).padding(.vertical, 6)
-            .background(Rectangle().fill(Color.white.opacity(0.05)))
+            .background(Rectangle().fill(Color.white.opacity(0.10)))
             .overlay(Rectangle().stroke(Color.white.opacity(0.18), lineWidth: 0.5))
         }
         .buttonStyle(TactileButtonStyle())

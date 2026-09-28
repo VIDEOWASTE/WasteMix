@@ -11,7 +11,7 @@ struct LFOView: View {
             HStack {
                 Text("LFO")
                     .font(.system(size: 11, weight: .black, design: .monospaced))
-                    .foregroundColor(channel.lfo.isActive ? R : .gray)
+                    .foregroundColor(channel.lfo.isActive ? R : .wmSecondary)
                 Spacer()
                 Toggle("", isOn: Binding(
                     get: { channel.lfo.enabled },
@@ -33,9 +33,9 @@ struct LFOView: View {
                                 Image(systemName: shape.icon).font(.system(size: 9))
                                 Text(shape.displayName).font(.system(size: 5, weight: .heavy, design: .monospaced))
                             }
-                            .foregroundColor(channel.lfo.shape == shape ? .white : .gray)
+                            .foregroundColor(channel.lfo.shape == shape ? .white : .wmSecondary)
                             .frame(maxWidth: .infinity).padding(.vertical, 4)
-                            .background(channel.lfo.shape == shape ? R.opacity(0.25) : Color.white.opacity(0.05))
+                            .background(channel.lfo.shape == shape ? R.opacity(0.25) : Color.white.opacity(0.10))
                             .overlay(
                                 VStack { Rectangle().fill(channel.lfo.shape == shape ? R : Color.clear).frame(height: 2); Spacer() }
                             )
@@ -48,7 +48,7 @@ struct LFOView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("TARGET")
                         .font(.system(size: 7, weight: .black, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
                     let cols = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
                     LazyVGrid(columns: cols, spacing: 3) {
                         ForEach(LFOTarget.allCases) { t in
@@ -60,12 +60,12 @@ struct LFOView: View {
                                     .font(.system(size: 8, weight: .heavy, design: .monospaced))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.7)
-                                    .foregroundColor(channel.lfo.target == t ? .white : .gray)
+                                    .foregroundColor(channel.lfo.target == t ? .white : .wmSecondary)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 5)
-                                    .background(channel.lfo.target == t ? R.opacity(0.35) : Color.white.opacity(0.05))
+                                    .background(channel.lfo.target == t ? R.opacity(0.35) : Color.white.opacity(0.10))
                                     .overlay(
-                                        Rectangle().stroke(channel.lfo.target == t ? R : Color.white.opacity(0.08), lineWidth: 0.5)
+                                        Rectangle().stroke(channel.lfo.target == t ? R : Color.white.opacity(0.14), lineWidth: 0.5)
                                     )
                             }
                             .buttonStyle(TactileButtonStyle())
@@ -77,7 +77,7 @@ struct LFOView: View {
                 HStack(spacing: 4) {
                     Text("RATE")
                         .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
                         .frame(width: 30, alignment: .trailing)
                     Slider(
                         value: Binding(get: { Double(channel.lfo.rate) }, set: { channel.lfo.rate = Float($0) }),
@@ -96,7 +96,7 @@ struct LFOView: View {
                         set: { channel.lfo.useBPM = $0 }
                     ))
                     .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
                     .tint(R)
 
                     if channel.lfo.useBPM {
@@ -110,7 +110,7 @@ struct LFOView: View {
                     HStack(spacing: 4) {
                         Text("DIV")
                             .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                            .foregroundColor(.gray)
+                            .foregroundColor(.wmSecondary)
                             .frame(width: 30, alignment: .trailing)
                         Slider(
                             value: Binding(get: { Double(channel.lfo.bpmDivision) }, set: { channel.lfo.bpmDivision = Float($0) }),
@@ -127,7 +127,7 @@ struct LFOView: View {
                 HStack(spacing: 4) {
                     Text("DEPTH")
                         .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
                         .frame(width: 30, alignment: .trailing)
                     Slider(
                         value: Binding(get: { Double(channel.lfo.depth) }, set: { channel.lfo.depth = Float($0) }),
@@ -144,7 +144,7 @@ struct LFOView: View {
                     HStack(spacing: 4) {
                         Text("MIN")
                             .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                            .foregroundColor(.gray)
+                            .foregroundColor(.wmSecondary)
                         Slider(
                             value: Binding(get: { Double(channel.lfo.min) }, set: { channel.lfo.min = Float($0) }),
                             in: 0...1
@@ -153,7 +153,7 @@ struct LFOView: View {
                     HStack(spacing: 4) {
                         Text("MAX")
                             .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                            .foregroundColor(.gray)
+                            .foregroundColor(.wmSecondary)
                         Slider(
                             value: Binding(get: { Double(channel.lfo.max) }, set: { channel.lfo.max = Float($0) }),
                             in: 0...1
@@ -165,10 +165,10 @@ struct LFOView: View {
                 HStack(spacing: 4) {
                     Text("OUT")
                         .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            Rectangle().fill(Color.white.opacity(0.06))
+                            Rectangle().fill(Color.white.opacity(0.12))
                             Rectangle().fill(R)
                                 .frame(width: geo.size.width * CGFloat(channel.lfoCurrent))
                         }
@@ -195,7 +195,7 @@ struct MasterLFOView: View {
             HStack {
                 Text("MASTER LFO")
                     .font(.system(size: 11, weight: .black, design: .monospaced))
-                    .foregroundColor(mixerState.masterLFO.isActive ? R : .gray)
+                    .foregroundColor(mixerState.masterLFO.isActive ? R : .wmSecondary)
                 Spacer()
                 Toggle("", isOn: $mixerState.masterLFO.enabled)
                     .labelsHidden().tint(R)
@@ -206,7 +206,7 @@ struct MasterLFOView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("TARGET")
                         .font(.system(size: 9, weight: .black, design: .monospaced))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.wmSecondary)
                     HStack(spacing: 4) {
                         ForEach(MasterLFOTarget.allCases) { t in
                             Button {
@@ -215,10 +215,10 @@ struct MasterLFOView: View {
                             } label: {
                                 Text(t.displayName)
                                     .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                                    .foregroundColor(mixerState.masterLFOTarget == t ? .white : .gray)
+                                    .foregroundColor(mixerState.masterLFOTarget == t ? .white : .wmSecondary)
                                     .frame(maxWidth: .infinity).padding(.vertical, 8)
-                                    .background(mixerState.masterLFOTarget == t ? R.opacity(0.35) : Color.white.opacity(0.05))
-                                    .overlay(Rectangle().stroke(mixerState.masterLFOTarget == t ? R : Color.white.opacity(0.08), lineWidth: 0.5))
+                                    .background(mixerState.masterLFOTarget == t ? R.opacity(0.35) : Color.white.opacity(0.10))
+                                    .overlay(Rectangle().stroke(mixerState.masterLFOTarget == t ? R : Color.white.opacity(0.14), lineWidth: 0.5))
                             }
                             .buttonStyle(TactileButtonStyle())
                         }
@@ -236,9 +236,9 @@ struct MasterLFOView: View {
                                 Image(systemName: shape.icon).font(.system(size: 12))
                                 Text(shape.displayName).font(.system(size: 7, weight: .heavy, design: .monospaced))
                             }
-                            .foregroundColor(mixerState.masterLFO.shape == shape ? .white : .gray)
+                            .foregroundColor(mixerState.masterLFO.shape == shape ? .white : .wmSecondary)
                             .frame(maxWidth: .infinity).padding(.vertical, 6)
-                            .background(mixerState.masterLFO.shape == shape ? R.opacity(0.3) : Color.white.opacity(0.05))
+                            .background(mixerState.masterLFO.shape == shape ? R.opacity(0.3) : Color.white.opacity(0.10))
                             .overlay(VStack { Rectangle().fill(mixerState.masterLFO.shape == shape ? R : Color.clear).frame(height: 2); Spacer() })
                         }
                         .buttonStyle(TactileButtonStyle())
@@ -247,7 +247,7 @@ struct MasterLFOView: View {
 
                 // Rate
                 HStack(spacing: 6) {
-                    Text("RATE").font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundColor(.gray).frame(width: 40, alignment: .trailing)
+                    Text("RATE").font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary).frame(width: 40, alignment: .trailing)
                     Slider(value: $mixerState.masterLFO.rate, in: 0.01...2.7).tint(R)
                     Text(String(format: "%.2fHz", mixerState.masterLFO.rate))
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
@@ -258,18 +258,18 @@ struct MasterLFOView: View {
                 HStack {
                     Toggle("BPM SYNC", isOn: $mixerState.masterLFO.useBPM)
                         .font(.system(size: 9, weight: .heavy, design: .monospaced))
-                        .foregroundColor(.gray).tint(R)
+                        .foregroundColor(.wmSecondary).tint(R)
                     if mixerState.masterLFO.useBPM {
                         Spacer()
                         Text("\(Int(mixerState.bpm))bpm")
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
-                            .foregroundColor(R.opacity(0.7))
+                            .foregroundColor(R.opacity(0.9))
                     }
                 }
 
                 if mixerState.masterLFO.useBPM {
                     HStack(spacing: 6) {
-                        Text("DIV").font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundColor(.gray).frame(width: 40, alignment: .trailing)
+                        Text("DIV").font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary).frame(width: 40, alignment: .trailing)
                         Slider(value: $mixerState.masterLFO.bpmDivision, in: 0.25...4.0, step: 0.25).tint(R)
                         Text(String(format: "%.2fx", mixerState.masterLFO.bpmDivision))
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
@@ -279,7 +279,7 @@ struct MasterLFOView: View {
 
                 // Depth
                 HStack(spacing: 6) {
-                    Text("DEPTH").font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundColor(.gray).frame(width: 40, alignment: .trailing)
+                    Text("DEPTH").font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary).frame(width: 40, alignment: .trailing)
                     Slider(value: $mixerState.masterLFO.depth, in: 0...1).tint(R)
                     Text("\(Int(mixerState.masterLFO.depth * 100))%")
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
@@ -289,21 +289,21 @@ struct MasterLFOView: View {
                 // Min / Max range
                 HStack(spacing: 8) {
                     HStack(spacing: 4) {
-                        Text("MIN").font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundColor(.gray)
+                        Text("MIN").font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary)
                         Slider(value: $mixerState.masterLFO.min, in: 0...1).tint(R)
                     }
                     HStack(spacing: 4) {
-                        Text("MAX").font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundColor(.gray)
+                        Text("MAX").font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary)
                         Slider(value: $mixerState.masterLFO.max, in: 0...1).tint(R)
                     }
                 }
 
                 // Live output meter
                 HStack(spacing: 6) {
-                    Text("OUT").font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundColor(.gray)
+                    Text("OUT").font(.system(size: 9, weight: .heavy, design: .monospaced)).foregroundColor(.wmSecondary)
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            Rectangle().fill(Color.white.opacity(0.06))
+                            Rectangle().fill(Color.white.opacity(0.12))
                             Rectangle().fill(R).frame(width: geo.size.width * CGFloat(mixerState.masterLFOCurrent))
                         }
                     }

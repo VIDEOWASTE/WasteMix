@@ -61,7 +61,7 @@ struct BlendModePickerView: View {
                     .foregroundColor(.white)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .bold))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.wmSecondary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)

@@ -152,8 +152,7 @@ struct WasteMixApp: App {
                 outputConfig: renderEngine.outputConfig,
                 renderEngine: renderEngine
             )
-            .onAppear { renderEngine.outputConfig.isAdvancedOutputOpen = true }
-            .onDisappear { renderEngine.outputConfig.isAdvancedOutputOpen = false }
+            .modifier(AdvancedOutputPresenceTracker(config: renderEngine.outputConfig))
             .preferredColorScheme(.dark)
             .tint(Color(red: 1.0, green: 0.15, blue: 0.15))
             .onAppear {
@@ -190,3 +189,20 @@ struct WasteMixApp: App {
     }
 }
 
+/// Keeps `isAdvancedOutputOpen` in sync with whether the Advanced Output
+/// window is actually on screen. On iPad, switching back to the mixer or
+/// swiping the window away backgrounds its scene without firing
+/// `onDisappear`, which left the mixer's button stuck in its "open" look.
+private struct AdvancedOutputPresenceTracker: ViewModifier {
+    let config: OutputConfig
+    @Environment(\.scenePhase) private var scenePhase
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { config.isAdvancedOutputOpen = true }
+            .onChange(of: scenePhase) { _, phase in
+                config.isAdvancedOutputOpen = phase != .background
+            }
+            .onDisappear { config.isAdvancedOutputOpen = false }
+    }
+}

@@ -37,7 +37,7 @@ struct ChannelStripView: View {
                 fullBody
             }
         }
-        .background(Color(red: 0.06, green: 0.06, blue: 0.07))
+        .background(Color(red: 0.09, green: 0.09, blue: 0.10))
         .clipShape(Rectangle())
         .overlay(
             Rectangle()
@@ -99,7 +99,7 @@ struct ChannelStripView: View {
             // Blend + transition row
             HStack(spacing: 0) {
                 blendCell
-                Rectangle().fill(Color.white.opacity(0.04)).frame(width: 0.5)
+                Rectangle().fill(Color.white.opacity(0.09)).frame(width: 0.5)
                 transitionCellCompact
             }
             cellBorder
@@ -236,7 +236,7 @@ struct ChannelStripView: View {
             .frame(maxWidth: .infinity)
             .background(
                 Rectangle()
-                    .fill(channel.source != nil ? channelColor.opacity(0.2) : channelColor.opacity(0.08))
+                    .fill(channel.source != nil ? channelColor.opacity(0.2) : channelColor.opacity(0.18))
                     .overlay(
                         Rectangle()
                             .stroke(channelColor.opacity(channel.source != nil ? 0.4 : 0.25), lineWidth: 1)
@@ -344,7 +344,7 @@ struct ChannelStripView: View {
             .frame(maxWidth: .infinity)
             .background(
                 Rectangle()
-                    .fill(isActive ? tint.opacity(0.25) : tint.opacity(0.08))
+                    .fill(isActive ? tint.opacity(0.25) : tint.opacity(0.18))
                     .overlay(
                         Rectangle()
                             .stroke(tint.opacity(isActive ? 0.5 : 0.25), lineWidth: 1)
@@ -370,7 +370,7 @@ struct ChannelStripView: View {
     // MARK: - Helpers
 
     private var cellBorder: some View {
-        Rectangle().fill(Color.white.opacity(0.04)).frame(height: 0.5)
+        Rectangle().fill(Color.white.opacity(0.09)).frame(height: 0.5)
     }
 
     private var levelMeter: some View {
@@ -385,7 +385,7 @@ struct ChannelStripView: View {
     }
 
     private func meterColor(for index: Int, lit: Bool) -> Color {
-        guard lit else { return Color.white.opacity(0.04) }
+        guard lit else { return Color.white.opacity(0.09) }
         if index >= 8 { return .red.opacity(0.8) }
         if index >= 6 { return .yellow.opacity(0.7) }
         return .green.opacity(0.6)
@@ -416,10 +416,10 @@ struct ChannelStripView: View {
             .padding(.vertical, 6)
             .background(
                 Rectangle()
-                    .fill(active ? tint.opacity(0.25) : Color.white.opacity(0.03))
+                    .fill(active ? tint.opacity(0.25) : Color.white.opacity(0.07))
                     .overlay(
                         Rectangle()
-                            .stroke(active ? tint.opacity(0.4) : Color.white.opacity(0.05), lineWidth: 0.5)
+                            .stroke(active ? tint.opacity(0.4) : Color.white.opacity(0.10), lineWidth: 0.5)
                     )
             )
         }

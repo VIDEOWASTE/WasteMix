@@ -39,7 +39,7 @@ struct MiniChannelView: View {
                         .frame(width: 5, height: 5)
                     Text("\(channel.id + 1)")
                         .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                        .foregroundColor(channel.isActive ? channelColor : .gray)
+                        .foregroundColor(channel.isActive ? channelColor : .wmSecondary)
                     if isSelectedForPreview {
                         Text("PVW")
                             .font(.system(size: 5, weight: .heavy, design: .monospaced))
@@ -81,12 +81,12 @@ struct MiniChannelView: View {
             } label: {
                 Text(channel.blendMode.shortLabel)
                     .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                    .foregroundColor(channel.blendMode != .normal ? .white : .gray)
+                    .foregroundColor(channel.blendMode != .normal ? .white : .wmSecondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 3)
                     .background(
                         Rectangle()
-                            .fill(channel.blendMode != .normal ? channelColor.opacity(0.2) : Color.white.opacity(0.04))
+                            .fill(channel.blendMode != .normal ? channelColor.opacity(0.2) : Color.white.opacity(0.09))
                     )
             }
             .menuStyle(.borderlessButton)
@@ -103,7 +103,7 @@ struct MiniChannelView: View {
                     .padding(.vertical, 4)
                     .background(
                         Rectangle()
-                            .fill(Color.white.opacity(0.04))
+                            .fill(Color.white.opacity(0.09))
                             .overlay(
                                 Rectangle()
                                     .stroke(channelColor.opacity(0.15), lineWidth: 0.5)
@@ -146,7 +146,7 @@ struct MiniChannelView: View {
         .padding(.horizontal, 2)
         .background(
             Rectangle()
-                .fill(Color(red: 0.06, green: 0.06, blue: 0.07))
+                .fill(Color(red: 0.09, green: 0.09, blue: 0.10))
                 .overlay(
                     Rectangle()
                         .stroke(
@@ -225,10 +225,10 @@ struct MiniChannelDetailSheet: View {
                                 .fontWeight(.medium)
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
+                                .foregroundColor(.wmSecondary)
                         }
                         .padding()
-                        .background(Color.white.opacity(0.05))
+                        .background(Color.white.opacity(0.10))
                         
                     }
                     .padding(.horizontal)

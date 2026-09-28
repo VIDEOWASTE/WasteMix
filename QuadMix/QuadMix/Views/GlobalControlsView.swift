@@ -25,11 +25,11 @@ struct GlobalControlsView: View {
             cellBorder
             outputInfoCell
         }
-        .background(Color(red: 0.06, green: 0.06, blue: 0.07))
+        .background(Color(red: 0.09, green: 0.09, blue: 0.10))
         .clipShape(Rectangle())
         .overlay(
             Rectangle()
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
         )
     }
 
@@ -40,7 +40,7 @@ struct GlobalControlsView: View {
             .tracking(2)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
-            .background(Color.white.opacity(0.03))
+            .background(Color.white.opacity(0.07))
     }
 
     private var crossfaderCell: some View {
@@ -88,7 +88,7 @@ struct GlobalControlsView: View {
             .frame(maxWidth: .infinity)
             .background(
                 Rectangle()
-                    .fill(isActive ? tint.opacity(0.25) : tint.opacity(0.08))
+                    .fill(isActive ? tint.opacity(0.25) : tint.opacity(0.18))
                     .overlay(
                         Rectangle()
                             .stroke(tint.opacity(isActive ? 0.5 : 0.25), lineWidth: 1)
@@ -160,7 +160,7 @@ struct GlobalControlsView: View {
     }
 
     private var cellBorder: some View {
-        Rectangle().fill(Color.white.opacity(0.04)).frame(height: 0.5)
+        Rectangle().fill(Color.white.opacity(0.09)).frame(height: 0.5)
     }
 
     private func quickButton(icon: String, label: String, fg: Color, action: @escaping () -> Void) -> some View {
@@ -173,8 +173,8 @@ struct GlobalControlsView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 5)
             .background(
-                Rectangle().fill(Color.white.opacity(0.03))
-                    .overlay(Rectangle().stroke(Color.white.opacity(0.05), lineWidth: 0.5))
+                Rectangle().fill(Color.white.opacity(0.07))
+                    .overlay(Rectangle().stroke(Color.white.opacity(0.10), lineWidth: 0.5))
             )
         }
         .buttonStyle(TactileButtonStyle())
