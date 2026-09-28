@@ -66,10 +66,10 @@ open build/Build/Products/Debug-maccatalyst/WasteMix.app
 
 ### NDI Support
 
-1. Download the [NDI SDK](https://ndi.video/tools/ndi-sdk/)
-2. Copy `libndi.dylib` to `QuadMix/QuadMix/NDI/`
-3. Copy `Processing.NDI.Lib.h` to `QuadMix/QuadMix/NDI/`
-4. Build with `ENABLE_NDI=1` (already set in build settings)
+1. Download and install the free [NDI SDK for Apple](https://ndi.video/for-developers/ndi-sdk/)
+   (installs to `/Library/NDI SDK for Apple`)
+2. Build with `ENABLE_NDI=1` (already set in build settings). iOS links
+   `libndi_ios.a`; Mac Catalyst embeds `libndi.dylib` via a build phase.
 
 ### Windows (DirectX)
 

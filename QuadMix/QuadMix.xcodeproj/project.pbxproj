@@ -390,15 +390,15 @@
 			files = (
 			);
 			inputPaths = (
-				"/Library/NDI Advanced SDK for Apple/lib/macOS/libndi_advanced.dylib",
+				"/Library/NDI SDK for Apple/lib/macOS/libndi.dylib",
 			);
 			name = "Embed NDI Library (macOS / Catalyst only)";
 			outputPaths = (
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/libndi_advanced.dylib",
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/libndi.dylib",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Embed the NDI Advanced SDK dylib (v6+) for macOS / Mac Catalyst.\n# iOS device builds link the static libndi_advanced_ios.a, so the\n# embed step is a Mac/Catalyst-only concern. The dylib is pulled from\n# the system-installed NDI Advanced SDK rather than a vendored copy so\n# we always pick up the latest installed version (NDI 5 had real\n# Bonjour-on-macOS issues — Catalyst couldn't see local sources).\nNDI_SRC=\"/Library/NDI Advanced SDK for Apple/lib/macOS/libndi_advanced.dylib\"\nif [ \"${PLATFORM_NAME}\" = \"macosx\" ] || [ \"${IS_MACCATALYST}\" = \"YES\" ]; then\n  if [ ! -f \"${NDI_SRC}\" ]; then\n    echo \"warning: NDI Advanced SDK not found at ${NDI_SRC} — skipping embed\"\n    exit 0\n  fi\n  mkdir -p \"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}\"\n  cp \"${NDI_SRC}\" \"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/libndi_advanced.dylib\"\n  # Re-sign with the host app's identity. NDI ships the dylib signed\n  # with their own Team ID, which dyld rejects (\"different Team IDs\").\n  # --force overrides the existing signature.\n  if [ -n \"${EXPANDED_CODE_SIGN_IDENTITY}\" ] && [ \"${CODE_SIGNING_REQUIRED}\" != \"NO\" ]; then\n    codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" \"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/libndi_advanced.dylib\"\n  fi\nelse\n  echo \"Skipping libndi_advanced.dylib embed for ${PLATFORM_NAME} (${EFFECTIVE_PLATFORM_NAME})\"\nfi\n";
+			shellScript = "# Embed the NDI SDK dylib (v6+) for macOS / Mac Catalyst.\n# iOS device builds link the static libndi_ios.a, so the\n# embed step is a Mac/Catalyst-only concern. The dylib is pulled from\n# the system-installed NDI SDK rather than a vendored copy so\n# we always pick up the latest installed version (NDI 5 had real\n# Bonjour-on-macOS issues — Catalyst couldn't see local sources).\nNDI_SRC=\"/Library/NDI SDK for Apple/lib/macOS/libndi.dylib\"\nif [ \"${PLATFORM_NAME}\" = \"macosx\" ] || [ \"${IS_MACCATALYST}\" = \"YES\" ]; then\n  if [ ! -f \"${NDI_SRC}\" ]; then\n    echo \"warning: NDI SDK not found at ${NDI_SRC} — skipping embed\"\n    exit 0\n  fi\n  mkdir -p \"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}\"\n  cp \"${NDI_SRC}\" \"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/libndi.dylib\"\n  # Re-sign with the host app's identity. NDI ships the dylib signed\n  # with their own Team ID, which dyld rejects (\"different Team IDs\").\n  # --force overrides the existing signature.\n  if [ -n \"${EXPANDED_CODE_SIGN_IDENTITY}\" ] && [ \"${CODE_SIGNING_REQUIRED}\" != \"NO\" ]; then\n    codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" \"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/libndi.dylib\"\n  fi\nelse\n  echo \"Skipping libndi.dylib embed for ${PLATFORM_NAME} (${EFFECTIVE_PLATFORM_NAME})\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -598,12 +598,12 @@
 				CODE_SIGN_ENTITLEMENTS = QuadMix/Resources/WasteMix.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = JT6H6DDP3S;
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)/QuadMix/NDI",
-					"\"/Library/NDI Advanced SDK for Apple/include\"",
+					"\"/Library/NDI SDK for Apple/include\"",
 				);
 				INFOPLIST_FILE = QuadMix/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = WasteMix;
@@ -618,12 +618,12 @@
 					"@executable_path/Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/QuadMix/NDI";
-				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = "\"/Library/NDI Advanced SDK for Apple/lib/iOS\"";
-				"LIBRARY_SEARCH_PATHS[sdk=macosx*]" = "\"/Library/NDI Advanced SDK for Apple/lib/macOS\"";
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = "\"/Library/NDI SDK for Apple/lib/iOS\"";
+				"LIBRARY_SEARCH_PATHS[sdk=macosx*]" = "\"/Library/NDI SDK for Apple/lib/macOS\"";
 				MARKETING_VERSION = 1.0;
 				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/QuadMix/Shaders";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
-					"-lndi_advanced_ios",
+					"-lndi_ios",
 					"-lc++",
 					"-lresolv",
 					"-framework",
@@ -637,7 +637,7 @@
 					"-framework",
 					Network,
 				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = "-lndi_advanced";
+				"OTHER_LDFLAGS[sdk=macosx*]" = "-lndi";
 				PRODUCT_BUNDLE_IDENTIFIER = com.wastemix.app;
 				PRODUCT_NAME = WasteMix;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -656,12 +656,12 @@
 				CODE_SIGN_ENTITLEMENTS = QuadMix/Resources/WasteMix.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = JT6H6DDP3S;
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)/QuadMix/NDI",
-					"\"/Library/NDI Advanced SDK for Apple/include\"",
+					"\"/Library/NDI SDK for Apple/include\"",
 				);
 				INFOPLIST_FILE = QuadMix/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = WasteMix;
@@ -676,12 +676,12 @@
 					"@executable_path/Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/QuadMix/NDI";
-				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = "\"/Library/NDI Advanced SDK for Apple/lib/iOS\"";
-				"LIBRARY_SEARCH_PATHS[sdk=macosx*]" = "\"/Library/NDI Advanced SDK for Apple/lib/macOS\"";
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = "\"/Library/NDI SDK for Apple/lib/iOS\"";
+				"LIBRARY_SEARCH_PATHS[sdk=macosx*]" = "\"/Library/NDI SDK for Apple/lib/macOS\"";
 				MARKETING_VERSION = 1.0;
 				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/QuadMix/Shaders";
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
-					"-lndi_advanced_ios",
+					"-lndi_ios",
 					"-lc++",
 					"-lresolv",
 					"-framework",
@@ -695,7 +695,7 @@
 					"-framework",
 					Network,
 				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = "-lndi_advanced";
+				"OTHER_LDFLAGS[sdk=macosx*]" = "-lndi";
 				PRODUCT_BUNDLE_IDENTIFIER = com.wastemix.app;
 				PRODUCT_NAME = WasteMix;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";

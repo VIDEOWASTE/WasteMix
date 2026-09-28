@@ -8,6 +8,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+- **Switched from the NDI Advanced SDK to the standard NDI SDK for Apple** — WasteMix only uses standard find/recv/send APIs, and the standard SDK is free to distribute on the App Store (no Vizrt vendor license required). iOS now links `libndi_ios`, Mac/Catalyst embeds `libndi.dylib` from `/Library/NDI SDK for Apple`. Build number bumped to 9.
+
 ---
 
 ## [0.0.6] — 2026-05-08
