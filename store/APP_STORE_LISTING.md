@@ -1,119 +1,140 @@
 # WasteMix — App Store Listing Copy
 
-Paste-ready text for App Store Connect. Character limits noted; all fields below
-are within Apple's limits.
+Paste-ready text for App Store Connect, audited against build 1.0 (11).
+Character counts are exact; all fields are within Apple's limits.
 
----
-
-## App Name (max 30)
+## Name (8/30)
 ```
 WasteMix
 ```
 
-## Subtitle (max 30)
+## Subtitle (26/30)
 ```
 Live 4-Channel Video Mixer
 ```
-_(26 chars)_
 
-## Promotional Text (max 170 — editable anytime without review)
+## Primary category
 ```
-Mix four live video channels in real time with NDI, GPU effects, audio-reactive visuals, and Resolume-style projection mapping. Built for VJs and live visual artists.
+Photo & Video
 ```
 
-## Keywords (max 100, comma-separated, no spaces needed between terms)
+## Secondary category
 ```
-VJ,video mixer,NDI,visuals,projection mapping,live,effects,crossfader,blend,strobe,audio reactive
+Music
 ```
-_(Tip: don't repeat words already in the app name/subtitle; don't use spaces after commas — they waste characters.)_
+_Optional_
 
-## Support URL (required)
+## Bundle ID
+```
+com.wastemix.app
+```
+_Pick this when creating the app record_
+
+## SKU
+```
+wastemix-ipad
+```
+_Any unique string; only you see it_
+
+## Promotional text (151/170)
+```
+Mix four live video channels in real time with NDI®, GPU effects, audio-reactive visuals and projection mapping. Built for VJs and live visual artists.
+```
+_Editable any time without a new review_
+
+## Description (1631/4000)
+```
+WasteMix is a real-time, four-channel video mixer for iPad, built for VJs, live visual artists and anyone running visuals at a show. Mix cameras, video files, images, capture cards and NDI® network sources on a GPU engine that runs at 60 fps.
+
+MIXER
+• Four channels with faders, plus Preview (PVW) and Program (PGM) monitors
+• 33 blend modes, including Screen, Add, Difference, Hard Mix and Glow
+• A/B crossfader with multi-channel assignment
+• Per-channel transitions: Mix, Cut, Dip to Black and 10 wipes
+• Tap tempo, Fade to Black and Recall
+
+EFFECTS
+• 20 real-time GPU effects, including Kaleidoscope, Datamosh, Feedback, Mirror, Halftone, Scanlines, Thermal, Tunnel and Displace
+• Freeze frame, luma key and chroma key
+• Picture-in-picture with scale, position and rotation
+• Per-channel and global color correction
+
+MODULATION
+• Per-channel LFOs and a master LFO: sine, triangle, square, sawtooth and random
+• Audio reactivity with a 7-band EQ and quick presets for kick, bass, vocals and hats
+
+SOURCES
+• iPad cameras, plus USB and HDMI capture cards over USB-C
+• NDI® sources on your network, found automatically
+• Videos and images from Photos
+• 15 audio visualizer styles
+• Solid colors and test patterns
+
+OUTPUT & PROJECTION MAPPING
+• NDI® output of the program feed, plus per-screen sends
+• External displays and projectors over USB-C or HDMI
+• Advanced Output: multiple screens and slices, mesh warp, corner pin, soft-edge blending and free transform
+• Record the program output to Photos
+
+PRESETS
+• Save and recall the full mixer state
+
+No accounts, no tracking, no ads.
+
+NDI® is a registered trademark of Vizrt NDI AB.
+```
+
+## Keywords (91/100)
+```
+VJ,visuals,NDI,projection mapping,live,effects,crossfader,blend,strobe,audio reactive,video
+```
+_Comma-separated, no spaces after commas_
+
+## Support URL
 ```
 https://videowaste.github.io/WasteMix/support.html
 ```
 
-## Marketing URL (optional)
+## Marketing URL
 ```
 https://videowaste.github.io/WasteMix/
 ```
+_Optional_
 
-## Privacy Policy URL (required)
+## Copyright
+```
+2026 Nathaniel Coleman
+```
+
+## Privacy Policy URL
 ```
 https://videowaste.github.io/WasteMix/privacy.html
 ```
 
-## Primary Category
+## Notes for App Review (1142/4000)
 ```
-Photo & Video
-```
-## Secondary Category (optional)
-```
-Music
-```
+WasteMix is a live video mixer for VJs. No account or sign-in is required.
 
----
+To see it working without extra equipment:
+1. Tap SOURCE on channel 1 and pick Back Camera, a video or image from Photos, a Test Pattern or an Audio Visualizer. The fader rises automatically and the picture appears in the PGM monitor.
+2. Add sources to more channels, raise their faders, and try the crossfader, blend modes (NORM menu), FX and PARAMS.
+3. The red ADVANCED OUTPUT button in the MASTER section opens the projection-mapping window.
 
-## Description (max 4000)
+NDI: WasteMix sends and receives NDI® video over the local network, which is why it asks for Local Network access. To test it, run any NDI sender (for example the free NDI Tools from ndi.video) on a computer on the same Wi-Fi. It appears under SOURCE > NDI Network Sources. WasteMix's own output appears on the network as "WasteMix Program".
 
-```
-WasteMix is a real-time, 4-channel video mixer built for VJs, live visual artists, and anyone performing visuals on stage. Mix cameras, video files, images, and NDI network sources together with a GPU-accelerated engine that runs at a smooth 60fps.
+Permissions: Camera (camera sources), Microphone (audio-reactive visuals only; audio is never recorded), Photos (importing media and saving recordings), Local Network (NDI).
 
-MIXER
-• Four independent video channels with vertical faders
-• 16 blend modes — Normal, Add, Multiply, Screen, Overlay, Difference and more
-• A/B crossfader with Cut, Mix, Dip, and 8 directional wipe transitions
-• Preview (PVW) and Program (PGM) monitors
-• Tap-tempo BPM sync
-
-EFFECTS
-• 16+ real-time GPU effects: Mirror, Invert, Mosaic, Strobe, RGB Split, Posterize, Blur, Solarize, Edges, Datamosh, Scanlines, Kaleidoscope, Halftone, Feedback
-• Per-channel freeze frame
-• Luma key and chroma key
-• Picture-in-Picture with scale and position
-• Per-channel and global color correction — brightness, contrast, saturation, hue, RGB gain, lift
-
-MODULATION
-• LFO with sine, triangle, square, sawtooth, and random waveforms
-• BPM-synced modulation
-• Audio reactivity with a 7-band EQ, from Sub Bass to Brilliance
-• Quick reactive presets: Kick, Bass, Vocal, Hats, Full
-
-INPUT SOURCES
-• iPad camera (front/back)
-• NDI network sources with automatic discovery
-• Video files (MP4, MOV, M4V)
-• Images (JPG, PNG, HEIF)
-• Solid colors and test patterns (Color Bars, Gradient, Checkerboard)
-
-OUTPUT & PROJECTION MAPPING
-• NDI output — global program feed plus per-screen sends
-• External display output over HDMI / USB-C with fullscreen support
-• Resolume-style Advanced Output:
-   - Multi-screen, multi-slice output
-   - Per-slice mesh warp with draggable grid nodes
-   - Corner-pin perspective warping
-   - Soft-edge blending for multi-projector setups
-   - Free transform — move, resize, rotate
-
-PRESETS
-• Save and recall your full mixer state, including per-channel settings
-
-Built with a Metal rendering pipeline and a liquid UI that scales to any screen. Whether you're running a single projector at a small show or a multi-display mapped setup, WasteMix keeps up.
+NDI® is a registered trademark of Vizrt NDI AB. WasteMix uses the NDI SDK for Apple under its license.
 ```
 
----
+## Other answers
 
-## Notes / What you still need to supply
-
-1. **Privacy Policy / Support / Marketing URLs:** hosted on GitHub Pages from
-   `docs/` on `main`. If you edit `store/PRIVACY_POLICY.md`, update
-   `docs/privacy.html` to match.
-2. **Screenshots:** the existing captures in `~/Desktop/WasteMix-screens` show
-   the camera permission alert — retake them with permissions already granted.
-3. **Screenshots (required):** This is an iPad app, so you need **13-inch iPad**
-   screenshots at **2048 × 2732** (portrait) or **2732 × 2048** (landscape),
-   1–10 images. Capture from a real iPad or the iPad Pro simulator.
-4. **Build:** Select build **1.0 (9)** (standard NDI SDK). Do not ship build 8.
-5. **Age Rating:** Answer the questionnaire (WasteMix has no objectionable
-   content → expect 4+).
-6. **Copyright field:** e.g. `2026 Nathaniel Coleman`.
+- **App Privacy:** No, we do not collect data from this app ("Data Not Collected"). No tracking.
+- **Age rating:** None / No for every question → 4+.
+- **Content rights:** does not contain, show or access third-party content.
+- **Export compliance:** answered by `ITSAppUsesNonExemptEncryption = false` in Info.plist.
+- **Build:** 1.0 (11). Never submit build 8 (unlicensed NDI Advanced SDK).
+- **Sign-in required:** No.
+- **Mac availability:** untick "Make this app available on Mac" until the Mac build is tested (needs App Sandbox).
+- **Screenshots:** `~/Desktop/WasteMix-screens-v2`, iPad 13-inch slot (2064 × 2752), order 01–04. Regenerate in the Simulator with the Debug-only `-WMDemo <mixer|fx|advanced|color>` launch argument.
+- **Your call:** price, and a phone number for the App Review contact.
