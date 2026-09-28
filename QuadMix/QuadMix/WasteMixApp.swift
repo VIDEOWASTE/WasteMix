@@ -153,6 +153,9 @@ struct WasteMixApp: App {
                 renderEngine: renderEngine
             )
             .modifier(AdvancedOutputPresenceTracker(config: renderEngine.outputConfig))
+            // Toolbar runs to the top edge; without this the iPad status bar
+            // (clock, Wi-Fi, battery) draws over the TFM and NDI controls.
+            .statusBarHidden()
             .preferredColorScheme(.dark)
             .tint(Color(red: 1.0, green: 0.15, blue: 0.15))
             .onAppear {

@@ -927,7 +927,7 @@ struct AdvancedOutputView: View {
         return AnyView(VStack(alignment: .leading, spacing: 6) {
             sectionHeader("DESTINATION", sc)
             HStack(spacing: 3) {
-                ForEach(OutputDestination.allCases) { dest in
+                ForEach(OutputDestination.selectable) { dest in
                     let sel = outputConfig.screens[idx].destination == dest
                     Button {
                         outputConfig.screens[idx].destination = dest

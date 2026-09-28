@@ -100,7 +100,12 @@ struct MixerView: View {
         }
         .ignoresSafeArea()
         .preferredColorScheme(.dark)
-        .onAppear { Haptics.prepare() }
+        .onAppear {
+            Haptics.prepare()
+            #if DEBUG
+            runScreenshotDemoIfRequested()
+            #endif
+        }
         .statusBarHidden()
         // Route any change to `sourcePickerChannel` (set by the channel-strip
         // SourceButton) into the unified panel system so the source picker
@@ -1336,3 +1341,48 @@ struct MediaCenterButton: View {
     }
 }
 
+#if DEBUG
+// MARK: - Screenshot demo mode (Debug builds only)
+
+extension MixerView {
+    /// Stages the mixer for App Store screenshots in the Simulator, where
+    /// there's no camera or NDI. Launch with `-WMDemo <scene>` after copying
+    /// Plasma/Neon Rings/Stripes/Sunset Tunnel.png into the app's Documents folder.
+    /// Scenes: mixer, fx, color, media, advanced.
+    fileprivate func runScreenshotDemoIfRequested() {
+        guard let scene = UserDefaults.standard.string(forKey: "WMDemo") else { return }
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let demoNames = ["Plasma", "Neon Rings", "Stripes", "Sunset Tunnel"]
+        let blends: [ChannelBlendMode] = [.normal, .screen, .add, .normal]
+        let levels: [Float] = [1.0, 0.85, 0.6, 0.0]
+        for (i, ch) in mixerState.channels.enumerated() where i < 4 {
+            let url = docs.appendingPathComponent(demoNames[i] + ".png")
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+            let source = ContentSource.image(url: url)
+            ch.source = source
+            inputManager.applySource(source, to: i, channel: ch, renderEngine: renderEngine)
+            ch.blendMode = blends[i]
+            ch.faderLevel = levels[i]
+        }
+        let fxChannel = mixerState.channels[2]
+        fxChannel.effectType = .kaleidoscope
+        fxChannel.effectIntensity = EffectType.kaleidoscope.defaultIntensity
+        fxChannel.effectParam2 = EffectType.kaleidoscope.defaultParam2
+        fxChannel.effectExtraParams = EffectType.kaleidoscope.defaultExtraParams
+        mixerState.selectedPreviewChannel = 2
+        mixerState.crossfaderPos = 0.35
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            switch scene {
+            case "fx": activePanel = .fxParams(2)
+            case "color": activePanel = .color(0)
+            case "media": activePanel = .mediaCenter
+            case "advanced":
+                renderEngine.outputConfig.canvasEditMode = .mesh
+                openAdvancedOutput()
+            default: break
+            }
+        }
+    }
+}
+#endif

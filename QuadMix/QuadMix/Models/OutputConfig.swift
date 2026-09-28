@@ -20,6 +20,12 @@ enum OutputDestination: String, CaseIterable, Codable, Identifiable {
     case fullscreen
 
     var id: String { rawValue }
+
+    /// Destinations offered in the Advanced Output picker. `.syphon` stays in
+    /// the enum so saved configs still decode, but it has no implementation
+    /// and Syphon doesn't exist on iPad, so it isn't shown.
+    static var selectable: [OutputDestination] { allCases.filter { $0 != .syphon } }
+
     var displayName: String {
         switch self {
         case .none: return "None"

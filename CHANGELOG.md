@@ -8,6 +8,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed (build 11)
+- **Status bar overlapped the Advanced Output toolbar** on iPad (clock over TFM, Wi-Fi/battery over the NDI indicator) — the window now hides the status bar like the mixer does.
+
+### Removed (build 11)
+- **Syphon** output destination hidden from the Advanced Output picker — it was never implemented and Syphon doesn't exist on iPad. The enum case remains so saved configs still decode.
+
+### Added (build 11)
+- Debug-only `-WMDemo <scene>` launch argument that stages the mixer for App Store screenshots in the Simulator (not compiled into Release).
+
 ### Fixed
 - **Master section cut off on 13" iPad in portrait** — unbounded 1pt dividers in the channel AUDIO|COLOR row and master columns stretched vertically, pushing the crossfader, tap tempo, Advanced Output, presets, REC and Media off-screen. Rows now size to their content, and the fit-to-window scale uses the measured content height instead of a hard-coded 560pt estimate.
 - **Advanced Output button stuck "open"** — state now follows the window's scene phase, so it resets when the window is backgrounded, not only when destroyed.
